@@ -25,7 +25,6 @@ class GId:
 class SemiUF:
     def __init__(self):
         self.uf = {} # dict[Id, (G, Id)]
-        self.local_data = {} # dict[Id, ?]
 
     def alloc(self) -> Id:
         i = Id(len(self.uf))
@@ -34,7 +33,7 @@ class SemiUF:
 
     def find(self, gid: GId) -> GId:
         while self.uf[gid.id] is not None:
-            gid = gid.g + self.uf[gid.id]
+            gid = gid.g * self.uf[gid.id]
         return gid
 
     def handle_self_edge(self, i: Id, g: G):
@@ -45,7 +44,7 @@ class SemiUF:
         y = self.find(y)
 
         i = x.id
-        y = -x.g + y
+        y = x.g.inverse() * y
 
         if i == y.id:
             self.handle_self_edge(i, y.g)

@@ -23,4 +23,13 @@ class Renaming:
 
     def inverse(self) -> Renaming:
         Renaming.mk([(v, k) for (k, v) in self.m])
-        
+
+class SlottedUF(SemiUF):
+    def __init__(self):
+        super(self).__init__()
+
+    def alloc_slotted(self, identity: Renaming):
+        x = self.alloc()
+
+    def handle_self_edge(self, other):
+        pass
