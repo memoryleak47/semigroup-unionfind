@@ -1,52 +1,70 @@
 from dataclasses import dataclass
 from typing import Protocol
 
+# We typically write G for an element from an SemigroupWithInvolution.
 class SemigroupWithInvolution(Protocol):
-    def __mul__(self, other: Self) -> Self: pass
+    # g1 * g2 * i = compose(g1, g2) * i
+    # Thus the *right* argument is evaluated first.
+    def compose(self, other: Self) -> Self: pass
     def inverse(self) -> Self: pass
+
+# This "set"-like lattice is a collection of G elements.
+# It represents all the self-edges that we have.
+class Lattice(Protocol):
+    def add(self, new_fact: G): pass
+    def contains(self, fact: G) -> bool: pass
 
 @dataclass(frozen=True)
 class Id:
     i: int
 
-    def __rmul__(self, g: G):
-        return GId(g2, self)
+    def __repr__(self):
+        return f"id{self.i}"
 
-# equivalent to `g * id`
 @dataclass(frozen=True)
 class GId:
     g: G
     id: Id
 
-    def __rmul__(self, g2: G):
-        return GId(g2 * self.g, self.id)
+    def __repr__(self):
+        return f"[{self.g}]{self.id}"
 
-# This is generic over the SemigroupWithInvolution G
+# This is generic over a Lattice L and a SemigroupWithInvolution G.
 class SemiUF:
     def __init__(self):
         self.uf = {} # dict[Id, (G, Id)]
+        self.lattice = {} # dict[Id, L]
 
-    def alloc(self) -> Id:
+    def alloc(self, lat: L) -> Id:
         i = Id(len(self.uf))
         self.uf[i] = None
+        self.lattice[i] = lat
         return i
 
     def find(self, gid: GId) -> GId:
-        while self.uf[gid.id] is not None:
-            gid = gid.g * self.uf[gid.id]
+        while (a := self.uf[gid.id]) is not None:
+            gid = GId(gid.g.compose(a.g), a.id)
         return gid
-
-    def handle_self_edge(self, i: Id, g: G):
-        pass
 
     def union(self, x: GId, y: GId):
         x = self.find(x)
         y = self.find(y)
 
+        # x.g * x.id = y.g * y.id
+        # x.id = x.g⁻¹ * y.g * y.id
         i = x.id
-        y = x.g.inverse() * y
+        y = GId(x.g.inverse().compose(y.g), y.id)
 
         if i == y.id:
-            self.handle_self_edge(i, y.g)
+            self.lattice[i].add(y.g)
         else:
             self.uf[i] = y
+
+    def is_equal(self, x: GId, y: GId) -> bool:
+        x = self.find(x)
+        y = self.find(y)
+        if x.id != y.id: return False
+
+        i = x.id
+        yg = x.g.inverse().compose(y.g)
+        return self.lattice[i].contains(yg)
