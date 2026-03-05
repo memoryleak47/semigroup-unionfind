@@ -13,7 +13,11 @@ class SemigroupWithInvolution(Protocol):
 class Lattice(Protocol):
     def add(self, new_fact: G): pass
     def contains(self, fact: G) -> bool: pass
-    def join(self, other: Self) -> Self: pass # TODO we'll need to use this when merging two classes.
+
+    # join (i.e. "union") two lattices.
+    def join(self, other: Self) -> Self: pass
+
+    # translate the lattice from one element to another one, through a G-annotated edge.
     def move(self, g: G) -> Self: pass
 
 @dataclass(frozen=True)

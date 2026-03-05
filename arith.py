@@ -58,8 +58,23 @@ class ArithL:
 
         return g == ArithG(0.0, 1.0)
 
+    def move(self, g: G) -> ArithL:
+        if self.elem is None: return self
+
+        new = ArithL()
+        new.elem = g.a + g.b * self.elem
+        return new
+
+    def join(self, other: L) -> ArithL:
+        if self.elem is None: return other
+        if other.elem is None: return self
+        assert(self.elem == other.elem)
+        return self
+
 suf = SemiUF()
 a = suf.alloc(ArithL())
 b = suf.alloc(ArithL())
+c = suf.alloc(ArithL())
+suf.union(GId(ArithG(10, 2), b), GId(ArithG(0, 1), c))
 suf.union(GId(ArithG(3, 1), a), GId(ArithG(0, 1), b))
 suf.union(GId(ArithG(0, 2), a), GId(ArithG(0, 1), b))
