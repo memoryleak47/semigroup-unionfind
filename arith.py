@@ -75,6 +75,14 @@ suf = SemiUF()
 a = suf.alloc(ArithL())
 b = suf.alloc(ArithL())
 c = suf.alloc(ArithL())
-suf.union(GId(ArithG(10, 2), b), GId(ArithG(0, 1), c))
-suf.union(GId(ArithG(3, 1), a), GId(ArithG(0, 1), b))
-suf.union(GId(ArithG(0, 2), a), GId(ArithG(0, 1), b))
+suf.union(GId(ArithG(10, 2), b), GId(ArithG(0, 1), c)) # 10 + 2*b = c
+suf.union(GId(ArithG(3, 1), a), GId(ArithG(0, 1), b))  # 3 + a = b
+suf.union(GId(ArithG(0, 2), a), GId(ArithG(0, 1), b))  # 2*a = b
+                                                       # -> 2*a = 3+a
+                                                       # -> a = 3
+                                                       # -> b = 6
+                                                       # -> c = 22
+
+print(suf.get_effective_lattice(GId(ArithG(0, 1), a)).elem)
+print(suf.get_effective_lattice(GId(ArithG(0, 1), b)).elem)
+print(suf.get_effective_lattice(GId(ArithG(0, 1), c)).elem)

@@ -79,3 +79,7 @@ class SemiUF:
         i = x.id
         yg = x.g.inverse().compose(y.g)
         return self.lattice[i].contains(yg)
+
+    def get_effective_lattice(self, x: GId) -> L:
+        x = self.find(x)
+        return self.lattice[x.id].move(x.g)
