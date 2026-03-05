@@ -57,6 +57,22 @@ class SlottedLattice:
         x = self.identity.compose(x)
         return x in self.group
 
+    def join(self, other: Self) -> Self:
+        id = self.identity.compose(other.identity)
+        s = SlottedLattice({v for _, v in id.m})
+        for x in self.group:
+            s.add(x)
+        for x in other.group:
+            s.add(x)
+        return s
+
+    def move(self, g: G) -> Self:
+        id = g.inverse().compose(self.identity.compose(g))
+        s = SlottedLattice({v for _, v in id.m})
+        for x in self.group:
+            s.add(g.inverse().compose(x.compose(g)))
+        return s
+
 suf = SemiUF()
 a = suf.alloc(SlottedLattice({0, 1}))
 b = suf.alloc(SlottedLattice({2, 3}))
