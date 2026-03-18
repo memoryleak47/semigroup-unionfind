@@ -5,8 +5,10 @@ trait Grp: Copy + Eq {
 
 trait Lat<G: Grp>: Copy + Eq {
     fn act(_: G, _: Self) -> Self;
-    fn mk(_: G) -> Self;
     fn join(_: Self, _: Self) -> Self;
+
+    fn mk(_: G) -> Self;
+    fn contains(_: Self, _: G) -> bool;
 }
 
 type Id = usize;
@@ -94,6 +96,15 @@ impl<G: Grp, L: Lat<G>> GUF<G, L> {
         opt_act(g, self.classes[id].lat)
     }
 
+    fn is_equal(&self, a1: Id, a2: Id) -> bool {
+        let (g1, x1) = self.find(a1);
+        let (g2, x2) = self.find(a2);
+
+        if x1 != x2 { return false }
+        let g = opt_compose(opt_inverse(g1), g2);
+        opt_contains(self.classes[x1].lat, g)
+    }
+
     // private implementation detail.
     fn find(&self, id: Id) -> (Option<G>, Id) {
         self.find_gid(self.classes[id].gid)
@@ -127,6 +138,14 @@ fn opt_mk<G: Grp, L: Lat<G>>(g: Option<G>) -> Option<L> {
 
 fn opt_act<G: Grp, L: Lat<G>>(g: Option<G>, l: Option<L>) -> Option<L> {
     Some(L::act(g?, l?))
+}
+
+fn opt_contains<G: Grp, L: Lat<G>>(l: Option<L>, g: Option<G>) -> bool {
+    match (l, g) {
+        (Some(l), Some(g)) => L::contains(l, g),
+        (_, None) => true, // `g=None` means "no offset", and is always contained.
+        (None, Some(_)) => false,
+    }
 }
 
 fn main() {}
