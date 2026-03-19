@@ -80,12 +80,12 @@ class GUF[G: InverseSemigroup]: # We are generic over some InverseSemigroup G
             g, x = opt_compose(g, g2), x2
 
 
-def opt_compose(x: G|None, y: G|None) -> G|None: 
+def opt_compose(x: G|None, y: G|None) -> G|None:
     if x is None: return None
     if y is None: return None
     x.compose(y)
 
-def opt_inverse(x: G|None) -> G|None: 
+def opt_inverse(x: G|None) -> G|None:
     if x is None: return None
     x.inverse()
 
