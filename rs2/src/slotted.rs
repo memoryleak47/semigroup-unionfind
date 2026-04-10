@@ -43,7 +43,10 @@ impl Group for SlotMap {
     // l*(r*_)
     fn compose(l: &SlotMap, r: &SlotMap) -> SlotMap {
         let set = l.support().chain(r.support()).collect::<HashSet<Slot>>();
-        SlotMap::mk(set.into_iter().map(|x| (x, l.get(r.get(x)))))
+        SlotMap::mk(set.into_iter()
+                       .map(|x| (x, l.get(r.get(x))))
+                       .filter(|(x, y)| x != y)
+                   )
     }
 
     fn inverse(m: &SlotMap) -> SlotMap {
