@@ -5,6 +5,7 @@ type Slot = usize;
 // invariant: bijective & total (every missing key is the identity).
 // Thus the key & value sets are equal, we call them the support.
 // Every identity pairs are missing in v. v is sorted by keys.
+#[derive(Clone)]
 struct SlotMap {
     v: Vec<(Slot, Slot)>
 }
@@ -49,7 +50,7 @@ impl Group for SlotMap {
                    )
     }
 
-    fn inverse(m: &SlotMap) -> SlotMap {
-        SlotMap::mk(m.v.iter().copied().map(|(x, y)| (y, x)))
+    fn inverse(&self) -> SlotMap {
+        SlotMap::mk(self.v.iter().copied().map(|(x, y)| (y, x)))
     }
 }
