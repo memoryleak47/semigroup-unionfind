@@ -7,23 +7,21 @@ pub use uf::*;
 mod slotted;
 pub use slotted::*;
 
-trait Language: Eq + Hash {
-}
-
-trait Analysis<L: Language> {
+trait Analysis {
     type G: Group;
     type S: Semilattice<G=Self::G>;
+    type L: Eq + Hash;
 
-    fn canon(n: &L, uf: &Unionfind<Self::S>) -> (Self::G, L);
-    fn mk(n: &L) -> Self::S;
+    fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L);
+    fn mk(n: &Self::L) -> Self::S;
 }
 
-struct EGraph<L: Language, N: Analysis<L>> {
-    hashcons: HashMap<L, (N::G, Id)>,
+struct EGraph<N: Analysis> {
+    hashcons: HashMap<N::L, (N::G, Id)>,
     uf: Unionfind<N::S>,
 }
 
-impl<L: Language, N: Analysis<L>> EGraph<L, N> {
+impl<N: Analysis> EGraph<N> {
     pub fn new() -> Self {
         EGraph {
             hashcons: Default::default(),
@@ -31,7 +29,7 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
         }
     }
 
-    pub fn add(&mut self, n: &L) -> (N::G, Id) {
+    pub fn add(&mut self, n: &N::L) -> (N::G, Id) {
         let (g, n2) = N::canon(n, &self.uf);
         if let Some((g2, x)) = self.hashcons.get(&n2) {
             // n == g*n2
@@ -47,8 +45,22 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
     }
 
     pub fn union(&mut self, x: (N::G, Id), y: (N::G, Id)) {
-        self.uf.union(x, y)
-        // TODO rebuild
+        self.uf.union(x, y);
+        self.rebuild();
+    }
+
+    fn rebuild(&mut self) {
+        for (n, (g, x)) in std::mem::take(&mut self.hashcons) {
+            // n == g*x
+            let (g2, n2) = N::canon(&n, &self.uf);
+            // n == g2*n2
+            if let Some((g3, x3)) = self.hashcons.get(&n2) {
+                // n2 == g3*x3
+                // -> g2*g3*x3 = n = g*x
+                self.union((N::G::compose(&g2, &g3), *x3), (g, x));
+            }
+            // self.hashcons.insert();
+        }
     }
 }
 
