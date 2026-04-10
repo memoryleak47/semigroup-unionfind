@@ -4,8 +4,12 @@ pub struct Id(usize);
 
 pub trait Group {
     fn identity() -> Self;
-    fn compose(_: Self, _: Self) -> Self;
-    fn inverse(_: Self) -> Self;
+
+    // We typically left-multiply stuff with G, so `g*_`.
+    // composition is compatible with that order, so that `g1*(g2*x) = (g1*g2)*x = compose(g1, g2)*x`.
+    fn compose(_: &Self, _: &Self) -> Self;
+
+    fn inverse(_: &Self) -> Self;
 }
 
 pub trait Semilattice {
