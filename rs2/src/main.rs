@@ -14,7 +14,7 @@ trait Analysis<L: Language> {
     type G: Group;
     type S: Semilattice<G=Self::G>;
 
-    fn canon(n: &L) -> (Self::G, L);
+    fn canon(n: &L, uf: &Unionfind<Self::S>) -> (Self::G, L);
     fn mk(n: &L) -> Self::S;
 }
 
@@ -32,7 +32,7 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
     }
 
     pub fn add(&mut self, n: &L) -> (N::G, Id) {
-        let (g, n2) = N::canon(n);
+        let (g, n2) = N::canon(n, &self.uf);
         if let Some((g2, x)) = self.hashcons.get(&n2) {
             // n == g*n2
             // n2 == g2*x
