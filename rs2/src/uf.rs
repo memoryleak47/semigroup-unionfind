@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(PartialEq, Eq, Clone, Copy, Hash)]
+#[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
 pub struct Id(usize);
 
 pub trait Group: Clone {
@@ -97,6 +97,11 @@ impl<S: Semilattice> Unionfind<S> {
         let (g, x) = gx;
         let (g, x) = self.find((g.clone(), *x));
         S::act(&g, &self.v[x.0].s)
+    }
+
+    pub fn get_leader_semilattice(&self, x: Id) -> &S {
+        assert_eq!(self.v[x.0].leader.1, x);
+        &self.v[x.0].s
     }
 
     pub fn is_equal(&self, x1: (S::G, Id), x2: (S::G, Id)) -> bool {

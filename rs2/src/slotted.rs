@@ -7,7 +7,7 @@ type Slot = usize;
 // invariant: bijective & total (every missing key is the identity).
 // Thus the key & value sets are equal, we call them the support.
 // Every identity pairs are missing in v. v is sorted by keys.
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
 struct SlotMap {
     v: Vec<(Slot, Slot)>
 }
@@ -155,7 +155,7 @@ fn complete_data(d: &mut SlottedData) {
 
 /// SlottedLang ///
 
-#[derive(Hash, PartialEq, Eq, Clone)]
+#[derive(Hash, PartialEq, Eq, Clone, Debug)]
 enum SlottedLang {
     Lam(Slot, (SlotMap, Id)),
     App((SlotMap, Id), (SlotMap, Id)),
@@ -175,22 +175,20 @@ impl Analysis for Slotted {
     fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L) {
         match n {
             SlottedLang::Lam(x, b) => {
-                // TODO fix.
                 let (g, b) = uf.find(b.clone());
                 let mut d = HashMap::new();
-                d.insert(*x, 0);
+                // d :: slots(b) -> SHAPE
 
-                let mut slots: Vec<Slot> = uf.get_semilattice(&(SlotMap::identity(), b)).slots.into_iter().collect();
+                let mut slots: Vec<Slot> = uf.get_leader_semilattice(b).slots.iter().copied().collect();
                 slots.sort();
-                for s in slots {
-                    let s = g.get(s);
+                let it = std::iter::once(*x).chain(slots.into_iter().map(|x| g.get(x)));
+                for s in it {
                     if !d.contains_key(&s) {
                         d.insert(s, d.len());
                     }
                 }
-                let g = complete(d);
-                let ginv = g.inverse();
-                (g, SlottedLang::Lam(0, (ginv, b)))
+                let d = complete(d);
+                (SlotMap::compose(&g, &d.inverse()), SlottedLang::Lam(0, (d.clone(), b)))
             },
             SlottedLang::App(x1, x2) => todo!(),
             SlottedLang::Var(x) => {
@@ -253,11 +251,12 @@ fn lam(x: Slot, b: (SlotMap, Id), eg: &mut EGraph<Slotted>) -> (SlotMap, Id) { e
 fn alpha() {
     let mut eg = &mut EGraph::new();
 
-    let v0 = var(0, eg);
-    let v1 = var(1, eg);
+    let v3 = var(3, eg);
+    let v4 = var(4, eg);
 
-    let l0v0 = lam(0, v0, eg);
-    let l1v1 = lam(1, v1, eg);
+    let l3v3 = lam(3, v3, eg);
 
-    assert!(eg.is_equal(l0v0, l1v1));
+    let l4v4 = lam(4, v4, eg);
+
+    assert!(eg.is_equal(l3v3, l4v4));
 }
