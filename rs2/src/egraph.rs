@@ -6,6 +6,8 @@ pub trait Analysis {
     type L: Eq + Hash;
 
     fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L);
+
+    // should only be called on e-nodes after they have been given `canon`.
     fn mk(n: &Self::L, uf: &Unionfind<Self::S>) -> Self::S;
 }
 
@@ -42,7 +44,6 @@ impl<N: Analysis> EGraph<N> {
         self.rebuild();
     }
 
-    // TODO N::mk should be called again in here!
     fn rebuild(&mut self) {
         loop {
             let mut dirty = false;
@@ -54,6 +55,10 @@ impl<N: Analysis> EGraph<N> {
                 // -> n2 = g2⁻¹*g*x
                 let gn = N::G::compose(&g2.inverse(), &g);
                 // -> n2 = gn*x
+
+                let s = N::mk(&n2, &self.uf);
+                dirty |= self.uf.merge_s((gn.clone(), x), s);
+
                 if let Some((g3, x3)) = self.hashcons.get(&n2) {
                     dirty |= self.uf.union((g3.clone(), *x3), (gn, x));
                 } else {

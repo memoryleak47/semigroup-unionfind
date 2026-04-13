@@ -17,7 +17,7 @@ pub trait Semilattice {
     type G: Group;
 
     fn act(g: &Self::G, s: &Self) -> Self;
-    fn merge(&mut self, _: Self);
+    fn merge(&mut self, _: Self) -> bool; // returns whether "self" was changed.
 
     fn insert_self_edge(&mut self, g: Self::G);
     fn contains_self_edge(&self, g: &Self::G) -> bool;
@@ -64,6 +64,11 @@ impl<S: Semilattice> Unionfind<S> {
             // we want to return g*x where g2*x2 = x.
             (g, x) = (S::G::compose(&g, g2), *x2);
         }
+    }
+
+    pub fn merge_s(&mut self, (g, x): (S::G, Id), s: S) -> bool {
+        let s = S::act(&g.inverse(), &s);
+        self.v[x.0].s.merge(s)
     }
 
     pub fn union(&mut self, x1: (S::G, Id), x2: (S::G, Id)) -> bool {

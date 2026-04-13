@@ -63,6 +63,7 @@ impl Group for SlotMap {
 
 /// SlottedData ///
 
+#[derive(PartialEq, Eq)]
 struct SlottedData {
     slots: HashSet<Slot>,
     group: HashSet<SlotMap>,
@@ -82,11 +83,14 @@ impl Semilattice for SlottedData {
         SlottedData { slots, group }
     }
 
-    fn merge(&mut self, other: Self) {
+    fn merge(&mut self, other: Self) -> bool {
         let slots = &self.slots & &other.slots;
         let group = &self.group | &other.group;
-        *self = SlottedData { slots, group };
-        complete_data(self);
+        let mut out = SlottedData { slots, group };
+        complete_data(&mut out);
+        if &out == self { return false }
+        *self = out;
+        true
     }
 
     fn insert_self_edge(&mut self, g: Self::G) {
