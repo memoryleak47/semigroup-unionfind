@@ -223,6 +223,22 @@ impl Analysis for Slotted {
     }
 }
 
-fn complete(d: HashMap<Slot, Slot>) -> SlotMap {
-    todo!()
+fn complete(mut d: HashMap<Slot, Slot>) -> SlotMap {
+    let keys: HashSet<Slot> = d.keys().copied().collect();
+    let values: HashSet<Slot> = d.values().copied().collect();
+
+    let k2 = &keys - &values;
+    let v2 = &values - &keys;
+
+    let mut k2: Vec<Slot> = k2.into_iter().collect();
+    let mut v2: Vec<Slot> = v2.into_iter().collect();
+
+    assert_eq!(k2.len(), v2.len());
+    k2.sort();
+    v2.sort();
+
+    for (k, v) in k2.into_iter().zip(v2.into_iter()) {
+        d.insert(v, k);
+    }
+    SlotMap::mk(d.into_iter())
 }
