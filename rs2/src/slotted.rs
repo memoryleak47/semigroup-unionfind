@@ -188,9 +188,35 @@ impl Analysis for Slotted {
                     }
                 }
                 let d = complete(d);
-                (d.inverse(), SlottedLang::Lam(0, (SlotMap::compose(&d, &g), b)))
+                let m = SlotMap::compose(&d, &g);
+                // TODO it appears that (m, b) needs to be canoncalized.
+                (d.inverse(), SlottedLang::Lam(0, (m, b)))
             },
-            SlottedLang::App(x1, x2) => todo!(),
+            SlottedLang::App(x1, x2) => {
+                let (g1, i1) = uf.find(x1.clone());
+                let (g2, i2) = uf.find(x2.clone());
+
+                let mut d = HashMap::new();
+                // d :: slots(n) -> SHAPE
+
+                let mut slots1: Vec<Slot> = uf.get_leader_semilattice(i1).slots.iter().copied().collect();
+                slots1.sort();
+                let it1 = slots1.into_iter().map(|x| g1.get(x));
+
+                let mut slots2: Vec<Slot> = uf.get_leader_semilattice(i2).slots.iter().copied().collect();
+                slots2.sort();
+                let it2 = slots2.into_iter().map(|x| g2.get(x));
+
+                let it = it1.chain(it2);
+
+                for s in it {
+                    if !d.contains_key(&s) {
+                        d.insert(s, d.len());
+                    }
+                }
+                let d = complete(d);
+                (d.inverse(), SlottedLang::App((SlotMap::compose(&d, &g1), i1), (SlotMap::compose(&d, &g2), i2)))
+            },
             SlottedLang::Var(x) => {
                 if *x == 0 { (SlotMap::identity(), n.clone()) }
                 else {
@@ -246,6 +272,7 @@ fn complete(mut d: HashMap<Slot, Slot>) -> SlotMap {
 fn app(x: (SlotMap, Id), y: (SlotMap, Id), eg: &mut EGraph<Slotted>) -> (SlotMap, Id) { eg.add(&SlottedLang::App(x, y)) }
 fn var(x: Slot, eg: &mut EGraph<Slotted>) -> (SlotMap, Id) { eg.add(&SlottedLang::Var(x)) }
 fn lam(x: Slot, b: (SlotMap, Id), eg: &mut EGraph<Slotted>) -> (SlotMap, Id) { eg.add(&SlottedLang::Lam(x, b)) }
+fn sym(s: &str, eg: &mut EGraph<Slotted>) -> (SlotMap, Id) { eg.add(&SlottedLang::Sym(Symbol::new(s))) }
 
 #[test]
 fn alpha() {
@@ -258,4 +285,19 @@ fn alpha() {
     let l4v4 = lam(4, v4, eg);
 
     assert!(eg.is_equal(l3v3, l4v4));
+}
+
+#[test]
+fn test2() {
+    let mut eg = &mut EGraph::new();
+
+    let c = sym("c", eg);
+
+    let l2c = lam(2, c.clone(), eg);
+    let l3c = lam(3, c.clone(), eg);
+
+    dbg!(&l2c);
+    dbg!(&l3c);
+
+    assert!(eg.is_equal(l2c, l3c));
 }
