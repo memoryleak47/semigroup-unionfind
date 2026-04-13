@@ -155,7 +155,7 @@ fn complete_data(d: &mut SlottedData) {
 
 /// SlottedLang ///
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, PartialEq, Eq, Clone)]
 enum SlottedLang {
     Lam(Slot, (SlotMap, Id)),
     App((SlotMap, Id), (SlotMap, Id)),
@@ -172,7 +172,37 @@ impl Analysis for Slotted {
     type S = SlottedData;
     type L = SlottedLang;
 
-    fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L) { todo!() }
+    fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L) {
+        match n {
+            SlottedLang::Lam(x, b) => {
+                // TODO fix.
+                let (g, b) = uf.find(b.clone());
+                let mut d = HashMap::new();
+                d.insert(*x, 0);
+
+                let mut slots: Vec<Slot> = uf.get_semilattice(&(SlotMap::identity(), b)).slots.into_iter().collect();
+                slots.sort();
+                for s in slots {
+                    let s = g.get(s);
+                    if !d.contains_key(&s) {
+                        d.insert(s, d.len());
+                    }
+                }
+                let g = complete(d);
+                let ginv = g.inverse();
+                (g, SlottedLang::Lam(0, (ginv, b)))
+            },
+            SlottedLang::App(x1, x2) => todo!(),
+            SlottedLang::Var(x) => {
+                if *x == 0 { (SlotMap::identity(), n.clone()) }
+                else {
+                    let g = SlotMap::mk([(*x, 0), (0, *x)].into_iter());
+                    (g, SlottedLang::Var(0))
+                }
+            },
+            SlottedLang::Sym(_) => (SlotMap::identity(), n.clone()),
+        }
+    }
 
     fn mk(n: &Self::L, uf: &Unionfind<Self::S>) -> Self::S {
         let slots = match n {
@@ -191,4 +221,8 @@ impl Analysis for Slotted {
         group.insert(SlotMap::identity());
         SlottedData { slots, group }
     }
+}
+
+fn complete(d: HashMap<Slot, Slot>) -> SlotMap {
+    todo!()
 }
