@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Hash)]
 pub struct Id(usize);
 
 pub trait Group: Clone {

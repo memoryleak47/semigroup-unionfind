@@ -2,10 +2,12 @@ use crate::*;
 
 type Slot = usize;
 
+/// SlotMap ///
+
 // invariant: bijective & total (every missing key is the identity).
 // Thus the key & value sets are equal, we call them the support.
 // Every identity pairs are missing in v. v is sorted by keys.
-#[derive(Clone)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 struct SlotMap {
     v: Vec<(Slot, Slot)>
 }
@@ -53,4 +55,45 @@ impl Group for SlotMap {
     fn inverse(&self) -> SlotMap {
         SlotMap::mk(self.v.iter().copied().map(|(x, y)| (y, x)))
     }
+}
+
+/// SlottedData ///
+
+struct SlottedData {
+    group: HashSet<SlotMap>,
+    slots: HashSet<Slot>,
+}
+
+impl Semilattice for SlottedData {
+    type G = SlotMap;
+
+    fn act(g: &Self::G, s: &Self) -> Self { todo!() }
+
+    fn merge(&mut self, _: Self) -> Self { todo!() }
+
+    fn insert_self_edge(&mut self, g: Self::G) -> Self { todo!() }
+    fn contains_self_edge(&self, g: &Self::G) -> bool { todo!() }
+}
+
+/// SlottedLang ///
+
+#[derive(Hash, PartialEq, Eq)]
+enum SlottedLang {
+    Lam(Slot, (SlotMap, Id)),
+    App((SlotMap, Id), (SlotMap, Id)),
+    Var(Slot),
+    Sym(String), // TODO intern
+}
+
+/// Slotted ///
+
+struct Slotted;
+
+impl Analysis for Slotted {
+    type G = SlotMap;
+    type S = SlottedData;
+    type L = SlottedLang;
+
+    fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L) { todo!() }
+    fn mk(n: &Self::L) -> Self::S { todo!() }
 }
