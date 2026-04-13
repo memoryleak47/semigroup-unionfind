@@ -14,7 +14,7 @@ struct SlotMap {
 
 impl SlotMap {
     pub fn mk(it: impl Iterator<Item=(Slot, Slot)>) -> SlotMap {
-        let mut v: Vec<(Slot, Slot)> = it.collect();
+        let mut v: Vec<(Slot, Slot)> = it.filter(|(x, y)| x != y).collect();
 
         { // DEBUGGING
             for (x, y) in &v {
