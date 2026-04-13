@@ -63,7 +63,7 @@ impl Group for SlotMap {
 
 /// SlottedData ///
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 struct SlottedData {
     slots: HashSet<Slot>,
     group: HashSet<SlotMap>,
@@ -188,7 +188,7 @@ impl Analysis for Slotted {
                     }
                 }
                 let d = complete(d);
-                (SlotMap::compose(&g, &d.inverse()), SlottedLang::Lam(0, (d.clone(), b)))
+                (d.inverse(), SlottedLang::Lam(0, (SlotMap::compose(&d, &g), b)))
             },
             SlottedLang::App(x1, x2) => todo!(),
             SlottedLang::Var(x) => {
