@@ -68,6 +68,15 @@ struct SlottedData {
     group: HashSet<SlotMap>,
 }
 
+impl SlottedData {
+    fn new(it: impl Iterator<Item=Slot>) -> Self {
+        let slots = it.collect();
+        let mut group = HashSet::new();
+        group.insert(SlotMap::identity());
+        SlottedData { slots, group }
+    }
+}
+
 impl Semilattice for SlottedData {
     type G = SlotMap;
 
@@ -137,6 +146,7 @@ fn complete_data(d: &mut SlottedData) {
     }
 
     // saturate group.
+    d.group.insert(SlotMap::identity());
     loop {
         let old_group = std::mem::take(&mut d.group);
         for p1 in &old_group {
@@ -168,5 +178,13 @@ impl Analysis for Slotted {
     type L = SlottedLang;
 
     fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L) { todo!() }
-    fn mk(n: &Self::L) -> Self::S { todo!() }
+
+    fn mk(n: &Self::L) -> Self::S {
+        match n {
+            SlottedLang::Lam(x, (m, b)) => todo!(),
+            SlottedLang::App((m1, x1), (m2, x2)) => todo!(),
+            SlottedLang::Var(x) => SlottedData::new(std::iter::once(*x)),
+            SlottedLang::Sym(_) => SlottedData::new(std::iter::empty()),
+        }
+    }
 }
