@@ -1,3 +1,4 @@
+use symbol_table::GlobalSymbol as Symbol;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 

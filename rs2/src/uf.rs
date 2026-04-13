@@ -17,9 +17,9 @@ pub trait Semilattice {
     type G: Group;
 
     fn act(g: &Self::G, s: &Self) -> Self;
-    fn merge(&mut self, _: Self) -> Self;
+    fn merge(&mut self, _: Self);
 
-    fn insert_self_edge(&mut self, g: Self::G) -> Self;
+    fn insert_self_edge(&mut self, g: Self::G);
     fn contains_self_edge(&self, g: &Self::G) -> bool;
 }
 
