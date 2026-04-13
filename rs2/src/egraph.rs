@@ -68,4 +68,8 @@ impl<N: Analysis> EGraph<N> {
             if !dirty { break }
         }
     }
+
+    pub fn is_equal(&self, x: (N::G, Id), y: (N::G, Id)) -> bool {
+        self.uf.is_equal(x, y)
+    }
 }

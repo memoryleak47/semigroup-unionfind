@@ -98,4 +98,12 @@ impl<S: Semilattice> Unionfind<S> {
         let (g, x) = self.find((g.clone(), *x));
         S::act(&g, &self.v[x.0].s)
     }
+
+    pub fn is_equal(&self, x1: (S::G, Id), x2: (S::G, Id)) -> bool {
+        let (g1, x1) = self.find(x1);
+        let (g2, x2) = self.find(x2);
+        if x1 != x2 { return false }
+        let g = S::G::compose(&g1.inverse(), &g2);
+        self.v[x1.0].s.contains_self_edge(&g)
+    }
 }

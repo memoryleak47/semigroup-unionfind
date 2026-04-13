@@ -242,3 +242,22 @@ fn complete(mut d: HashMap<Slot, Slot>) -> SlotMap {
     }
     SlotMap::mk(d.into_iter())
 }
+
+
+//--- TESTS ---//
+fn app(x: (SlotMap, Id), y: (SlotMap, Id), eg: &mut EGraph<Slotted>) -> (SlotMap, Id) { eg.add(&SlottedLang::App(x, y)) }
+fn var(x: Slot, eg: &mut EGraph<Slotted>) -> (SlotMap, Id) { eg.add(&SlottedLang::Var(x)) }
+fn lam(x: Slot, b: (SlotMap, Id), eg: &mut EGraph<Slotted>) -> (SlotMap, Id) { eg.add(&SlottedLang::Lam(x, b)) }
+
+#[test]
+fn alpha() {
+    let mut eg = &mut EGraph::new();
+
+    let v0 = var(0, eg);
+    let v1 = var(0, eg);
+
+    let l0v0 = lam(0, v0, eg);
+    let l1v1 = lam(1, v1, eg);
+
+    assert!(eg.is_equal(l0v0, l1v1));
+}
