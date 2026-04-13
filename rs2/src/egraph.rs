@@ -42,6 +42,7 @@ impl<N: Analysis> EGraph<N> {
         self.rebuild();
     }
 
+    // TODO N::mk should be called again in here!
     fn rebuild(&mut self) {
         loop {
             let mut dirty = false;
