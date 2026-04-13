@@ -6,7 +6,7 @@ pub trait Analysis {
     type L: Eq + Hash;
 
     fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L);
-    fn mk(n: &Self::L) -> Self::S;
+    fn mk(n: &Self::L, uf: &Unionfind<Self::S>) -> Self::S;
 }
 
 pub struct EGraph<N: Analysis> {
@@ -30,7 +30,7 @@ impl<N: Analysis> EGraph<N> {
             // -> n == g*g2*x
             (N::G::compose(&g, &g2), *x)
         } else {
-            let s = N::mk(&n2);
+            let s = N::mk(&n2, &self.uf);
             let x = self.uf.makeset(s);
             self.hashcons.insert(n2, (N::G::identity(), x));
             (g, x)

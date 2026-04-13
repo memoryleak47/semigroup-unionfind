@@ -68,15 +68,6 @@ struct SlottedData {
     group: HashSet<SlotMap>,
 }
 
-impl SlottedData {
-    fn new(it: impl Iterator<Item=Slot>) -> Self {
-        let slots = it.collect();
-        let mut group = HashSet::new();
-        group.insert(SlotMap::identity());
-        SlottedData { slots, group }
-    }
-}
-
 impl Semilattice for SlottedData {
     type G = SlotMap;
 
@@ -179,12 +170,22 @@ impl Analysis for Slotted {
 
     fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L) { todo!() }
 
-    fn mk(n: &Self::L) -> Self::S {
-        match n {
-            SlottedLang::Lam(x, (m, b)) => todo!(),
-            SlottedLang::App((m1, x1), (m2, x2)) => todo!(),
-            SlottedLang::Var(x) => SlottedData::new(std::iter::once(*x)),
-            SlottedLang::Sym(_) => SlottedData::new(std::iter::empty()),
-        }
+    fn mk(n: &Self::L, uf: &Unionfind<Self::S>) -> Self::S {
+        let slots = match n {
+            SlottedLang::Lam(x, b) => {
+                let mut slots = uf.get_semilattice(b).slots;
+                slots.remove(&x);
+                slots
+            },
+            SlottedLang::App(x1, x2) => {
+                &uf.get_semilattice(x1).slots | &uf.get_semilattice(x2).slots
+            },
+            SlottedLang::Var(x) => std::iter::once(*x).collect(),
+            SlottedLang::Sym(_) => std::iter::empty().collect(),
+        };
+        let mut group = HashSet::new();
+        group.insert(SlotMap::identity());
+        SlottedData { slots, group }
+
     }
 }
