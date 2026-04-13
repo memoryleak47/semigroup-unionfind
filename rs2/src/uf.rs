@@ -66,7 +66,7 @@ impl<S: Semilattice> Unionfind<S> {
         }
     }
 
-    pub fn union(&mut self, x1: (S::G, Id), x2: (S::G, Id)) {
+    pub fn union(&mut self, x1: (S::G, Id), x2: (S::G, Id)) -> bool {
         let (g1, x1) = self.find(x1);
         let (g2, x2) = self.find(x2);
 
@@ -76,11 +76,15 @@ impl<S: Semilattice> Unionfind<S> {
         // x1 = gg * x2
 
         if x1 == x2 {
-            self.v[x1.0].s.insert_self_edge(gg);
+            if !self.v[x1.0].s.contains_self_edge(&gg) {
+                self.v[x1.0].s.insert_self_edge(gg);
+                true
+            } else { false }
         } else {
             let acted = S::act(&gg.inverse(), &self.v[x1.0].s); // gg⁻¹*x1
             self.v[x2.0].s.merge(acted);
             self.v[x1.0].leader = (gg, x2);
+            true
         }
     }
 }
