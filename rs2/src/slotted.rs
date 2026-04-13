@@ -255,7 +255,6 @@ fn alpha() {
     let v4 = var(4, eg);
 
     let l3v3 = lam(3, v3, eg);
-
     let l4v4 = lam(4, v4, eg);
 
     assert!(eg.is_equal(l3v3, l4v4));
