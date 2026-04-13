@@ -254,7 +254,7 @@ fn alpha() {
     let mut eg = &mut EGraph::new();
 
     let v0 = var(0, eg);
-    let v1 = var(0, eg);
+    let v1 = var(1, eg);
 
     let l0v0 = lam(0, v0, eg);
     let l1v1 = lam(1, v1, eg);
