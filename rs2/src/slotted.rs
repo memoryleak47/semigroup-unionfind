@@ -186,6 +186,5 @@ impl Analysis for Slotted {
         let mut group = HashSet::new();
         group.insert(SlotMap::identity());
         SlottedData { slots, group }
-
     }
 }
