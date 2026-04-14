@@ -215,7 +215,13 @@ impl Analysis for Slotted {
                     }
                 }
                 let d = complete(d);
-                (d.inverse(), SlottedLang::App((SlotMap::compose(&d, &g1), i1), (SlotMap::compose(&d, &g2), i2)))
+                let m1 = SlotMap::compose(&d, &g1);
+                let m1 = canon((m1, i1), uf);
+
+                let m2 = SlotMap::compose(&d, &g2);
+                let m2 = canon((m2, i2), uf);
+
+                (d.inverse(), SlottedLang::App((m1, i1), (m2, i2)))
             },
             SlottedLang::Var(x) => {
                 if *x == 0 { (SlotMap::identity(), n.clone()) }
@@ -306,4 +312,23 @@ fn test2() {
     dbg!(&l3c);
 
     assert!(eg.is_equal(l2c, l3c));
+}
+
+#[test]
+fn test3() {
+    let mut eg = &mut EGraph::new();
+
+    let v3 = var(3, eg);
+    let v4 = var(4, eg);
+
+    let v3v4 = app(v3.clone(), v4.clone(), eg);
+    let v4v3 = app(v4.clone(), v3.clone(), eg);
+
+    let l3v3v4 = lam(3, v3v4, eg);
+    let l4v4v3 = lam(4, v4v3, eg);
+
+    let l4l3v3v4 = lam(4, l3v3v4, eg);
+    let l3l4v4v3 = lam(3, l4v4v3, eg);
+
+    assert!(eg.is_equal(l4l3v3v4, l3l4v4v3));
 }
