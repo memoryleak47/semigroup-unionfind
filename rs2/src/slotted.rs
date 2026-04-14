@@ -340,6 +340,9 @@ fn test4() {
     let v3 = var(3, eg);
     let v4 = var(4, eg);
 
+    let v5 = var(5, eg);
+    let v6 = var(6, eg);
+
     let v3v4 = app(v3.clone(), v4.clone(), eg);
     let v4v3 = app(v4.clone(), v3.clone(), eg);
 
@@ -348,7 +351,7 @@ fn test4() {
 
     assert!(!eg.is_equal(l3v3v4.clone(), l4v4v3.clone()));
 
-    eg.union(v3, v4);
+    eg.union(v5, v6);
 
     assert!(eg.is_equal(l3v3v4, l4v4v3));
 }
