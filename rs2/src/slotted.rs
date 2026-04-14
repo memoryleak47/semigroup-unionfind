@@ -189,7 +189,7 @@ impl Analysis for Slotted {
                 }
                 let d = complete(d);
                 let m = SlotMap::compose(&d, &g);
-                // TODO it appears that (m, b) needs to be canoncalized.
+                let m = canon((m, b), uf);
                 (d.inverse(), SlottedLang::Lam(0, (m, b)))
             },
             SlottedLang::App(x1, x2) => {
@@ -265,6 +265,12 @@ fn complete(mut d: HashMap<Slot, Slot>) -> SlotMap {
         d.insert(v, k);
     }
     SlotMap::mk(d.into_iter())
+}
+
+fn canon((m, x): (SlotMap, Id), uf: &Unionfind<SlottedData>) -> SlotMap {
+    let slots = &uf.get_leader_semilattice(x).slots;
+    let m2 = m.iter().filter(|(a, b)| slots.contains(a)).collect();
+    complete(m2)
 }
 
 
