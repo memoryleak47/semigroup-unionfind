@@ -13,6 +13,8 @@ pub trait Group: Clone {
     fn inverse(&self) -> Self;
 }
 
+// Note: This Semilattice encodes a subgroup of G.
+// After all, self-edges are closed under composition and inversion.
 pub trait Semilattice {
     type G: Group;
 
