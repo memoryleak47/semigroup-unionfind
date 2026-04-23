@@ -5,11 +5,11 @@ use std::hash::Hash;
 mod uf;
 pub use uf::*;
 
-mod slotted;
-pub use slotted::*;
-
 mod egraph;
 pub use egraph::*;
 
-fn main() {
-}
+// Examples:
+mod slotted;
+mod linear;
+
+fn main() {}
