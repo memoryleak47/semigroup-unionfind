@@ -1,13 +1,17 @@
 use crate::*;
 
-#[derive(Clone, PartialEq)]
+use ordered_float::OrderedFloat;
+type F64 = OrderedFloat<f64>;
+fn f(x: f64) -> F64 { OrderedFloat(x) }
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct Linear {
-    factor: f64,
-    offset: f64
+    factor: F64,
+    offset: F64
 }
 
 impl Linear {
-    pub fn apply(&self, x: f64) -> f64 {
+    pub fn apply(&self, x: F64) -> F64 {
         self.factor * x + self.offset
     }
 }
@@ -15,8 +19,8 @@ impl Linear {
 impl Group for Linear {
     fn identity() -> Linear {
         Linear {
-            factor: 1.0,
-            offset: 0.0,
+            factor: f(1.0),
+            offset: f(0.0),
         }
     }
 
@@ -29,15 +33,15 @@ impl Group for Linear {
 
     fn inverse(&self) -> Linear {
         Linear {
-            factor: 1.0 / self.factor,
+            factor: f(1.0) / self.factor,
             offset: -self.offset/self.factor,
         }
     }
 }
 
-struct ConstProp(Option<f64>);
+struct ConstProp(Option<F64>);
 
-fn is_close(x: f64, y: f64) -> bool { (x - y).abs() <= 1e-10 }
+fn is_close(x: F64, y: F64) -> bool { (x - y).abs() <= 1e-10 }
 
 impl Semilattice for ConstProp {
     type G = Linear;
@@ -70,10 +74,10 @@ impl Semilattice for ConstProp {
         // a*x + b = x
         // (a-1)*x = -b
         // x = b/(1-a)
-        let other = if is_close(g.factor, 1.0) {
+        let other = if is_close(g.factor, f(1.0)) {
             None
         } else {
-            Some(g.offset / (1.0 - g.factor - 1.0))
+            Some(g.offset / (f(1.0) - g.factor - f(1.0)))
         };
         self.merge(ConstProp(other));
     }
@@ -81,7 +85,42 @@ impl Semilattice for ConstProp {
     fn contains_self_edge(&self, g: &Self::G) -> bool {
         match *self {
             ConstProp(Some(v)) => g.apply(v) == v,
-            ConstProp(None) => is_close(g.factor, 1.0) && is_close(g.offset, 0.0),
+            ConstProp(None) => is_close(g.factor, f(1.0)) && is_close(g.offset, f(0.0)),
+        }
+    }
+}
+
+type LinearId = (Linear, Id);
+
+#[derive(Hash, PartialEq, Eq, Clone, Copy)]
+enum LinearLang {
+    Add([LinearId; 2]),
+    Mul([LinearId; 2]),
+    Const(F64),
+    Symbol(Symbol),
+}
+
+struct LinearAnalysis;
+
+impl Analysis for LinearAnalysis {
+    type G = Linear;
+    type S = ConstProp;
+    type L = LinearLang;
+
+    fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L) {
+        match n {
+            LinearLang::Add([x, y]) => (Linear::identity(), LinearLang::Add([uf.find(*x), uf.find(*y)])), // TODO more canon!
+            LinearLang::Mul([x, y]) => (Linear::identity(), LinearLang::Mul([uf.find(*x), uf.find(*y)])), // TODO more canon!
+            n => (Linear::identity(), *n),
+        }
+    }
+
+    fn mk(n: &Self::L, uf: &Unionfind<Self::S>) -> Self::S {
+        match n {
+            LinearLang::Add([x, y]) => todo!(),
+            LinearLang::Mul([x, y]) => todo!(),
+            LinearLang::Const(c) => ConstProp(Some(*c)), // TODO merge classes that have const-prop'd to 1*c so that they all get merged.
+            LinearLang::Symbol(_) => ConstProp(None),
         }
     }
 }
@@ -89,8 +128,8 @@ impl Semilattice for ConstProp {
 #[test]
 fn lintest() {
     let l = Linear {
-        factor: 22.,
-        offset: -4.,
+        factor: f(22.),
+        offset: f(-4.),
     };
 
     assert!(Linear::compose(&l, &l.inverse()) == Linear::identity());
