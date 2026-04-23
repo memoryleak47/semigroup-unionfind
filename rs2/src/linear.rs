@@ -77,7 +77,7 @@ impl Semilattice for ConstProp {
         let other = if is_close(g.factor, f(1.0)) {
             None
         } else {
-            Some(g.offset / (f(1.0) - g.factor - f(1.0)))
+            Some(g.offset / (f(1.0) - g.factor))
         };
         self.merge(ConstProp(other));
     }
