@@ -6,7 +6,7 @@ fn f(x: f64) -> F64 { OrderedFloat(x) }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct Linear {
-    factor: F64,
+    factor: F64, // is never allowed to be zero!
     offset: F64
 }
 
