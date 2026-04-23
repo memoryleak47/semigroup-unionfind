@@ -3,28 +3,6 @@ use crate::*;
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
 pub struct Id(usize);
 
-pub trait Group: Clone {
-    fn identity() -> Self;
-
-    // We typically left-multiply stuff with G, so `g*_`.
-    // composition is compatible with that order, so that `g1*(g2*x) = (g1*g2)*x = compose(g1, g2)*x`.
-    fn compose(_: &Self, _: &Self) -> Self;
-
-    fn inverse(&self) -> Self;
-}
-
-// Note: This Semilattice encodes a subgroup of G.
-// After all, self-edges are closed under composition and inversion.
-pub trait Semilattice {
-    type G: Group;
-
-    fn act(g: &Self::G, s: &Self) -> Self;
-    fn merge(&mut self, _: Self) -> bool; // returns whether "self" was changed.
-
-    fn insert_self_edge(&mut self, g: Self::G);
-    fn contains_self_edge(&self, g: &Self::G) -> bool;
-}
-
 struct UFClass<S: Semilattice> {
     s: S,
     leader: (S::G, Id),

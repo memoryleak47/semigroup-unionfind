@@ -1,16 +1,5 @@
 use crate::*;
 
-pub trait Analysis {
-    type G: Group;
-    type S: Semilattice<G=Self::G>;
-    type L: Eq + Hash;
-
-    fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L);
-
-    // should only be called on e-nodes after they have been given `canon`.
-    fn mk(n: &Self::L, uf: &Unionfind<Self::S>) -> Self::S;
-}
-
 pub struct EGraph<N: Analysis> {
     hashcons: HashMap<N::L, (N::G, Id)>,
     uf: Unionfind<N::S>,

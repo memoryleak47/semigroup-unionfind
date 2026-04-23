@@ -2,6 +2,9 @@ use symbol_table::GlobalSymbol as Symbol;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
+mod api;
+pub use api::*;
+
 mod uf;
 pub use uf::*;
 
