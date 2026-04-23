@@ -75,6 +75,7 @@ impl Semilattice for ConstProp {
         // (a-1)*x = -b
         // x = b/(1-a)
         let other = if is_close(g.factor, f(1.0)) {
+            assert!(is_close(g.offset, f(0.0)));
             None
         } else {
             Some(g.offset / (f(1.0) - g.factor))
