@@ -116,7 +116,7 @@ impl Analysis for ProofAnalysis {
         for x in &n.args {
             let (p, y) = uf.find(x.clone());
             proofs.push(p.clone());
-            args.push((p, y));
+            args.push((mk_refl(), y));
         }
         let p = mk_congr(proofs.into());
         let n = ProofLang {
