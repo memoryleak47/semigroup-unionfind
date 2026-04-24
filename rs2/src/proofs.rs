@@ -11,20 +11,56 @@ enum ProofObj {
     User(Symbol), // the symbol contains information about the rule application
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
-struct Proof(Rc<ProofObj>);
+type Proof = Rc<ProofObj>;
 
 impl Group for Proof {
     fn identity() -> Proof {
-        Proof(Rc::new(ProofObj::Refl))
+        Rc::new(ProofObj::Refl)
     }
 
     fn compose(l: &Proof, r: &Proof) -> Proof {
-        Proof(Rc::new(ProofObj::Trans(l.clone(), r.clone())))
+        mk_trans(l.clone(), r.clone())
     }
 
     fn inverse(&self) -> Proof {
-        Proof(Rc::new(ProofObj::Sym(self.clone())))
+        mk_sym(self.clone())
+    }
+}
+
+fn is_refl(x: &Proof) -> bool {
+    matches!(**x, ProofObj::Refl)
+}
+
+// smart constructors:
+fn mk_refl() -> Proof {
+    Rc::new(ProofObj::Refl)
+}
+
+fn mk_trans(x: Proof, y: Proof) -> Proof {
+    if is_refl(&x) {
+        y
+    } else if is_refl(&y) {
+        x
+    } else {
+        Rc::new(ProofObj::Trans(x, y))
+    }
+}
+
+fn mk_sym(x: Proof) -> Proof {
+    if is_refl(&x) {
+        mk_refl()
+    } else {
+        Rc::new(ProofObj::Sym(x))
+    }
+}
+
+fn mk_congr(argproofs: Box<[Proof]>) -> Proof {
+    if argproofs.iter().all(is_refl) {
+        mk_refl()
+    } else {
+        Rc::new(
+            ProofObj::Congr(argproofs)
+        )
     }
 }
 
@@ -82,9 +118,7 @@ impl Analysis for ProofAnalysis {
             proofs.push(p.clone());
             args.push((p, y));
         }
-        let p = Proof(Rc::new(
-            ProofObj::Congr(proofs.into())
-        ));
+        let p = mk_congr(proofs.into());
         let n = ProofLang {
             f: n.f,
             args: args.into(),
@@ -130,13 +164,13 @@ fn test_proofs() {
 
     eg.union(justify(a.clone(), "hey"), b.clone());
 
-    dbg!(eg.find(a));
-    dbg!(eg.find(b));
+    dbg!(eg.find(fa));
+    dbg!(eg.find(fb));
     assert!(false);
 }
 
 fn justify((p, x): (Proof, Id), j: &str) -> (Proof, Id) {
     let j = Symbol::from(j);
-    let p2 = Proof(Rc::new(ProofObj::User(j)));
+    let p2 = Rc::new(ProofObj::User(j));
     (Proof::compose(&p, &p2), x)
 }
