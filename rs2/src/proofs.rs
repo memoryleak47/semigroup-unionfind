@@ -47,7 +47,9 @@ fn mk_trans(x: Proof, y: Proof) -> Proof {
 }
 
 fn mk_sym(x: Proof) -> Proof {
-    if is_refl(&x) {
+    if let ProofObj::Sym(xx) = &*x && let ProofObj::Sym(xxx) = &**xx {
+        xxx.clone()
+    } else if is_refl(&x) {
         mk_refl()
     } else {
         Rc::new(ProofObj::Sym(x))
@@ -138,7 +140,7 @@ fn test_proofs() {
         args: Box::new([b.clone()]),
     });
 
-    eg.union(justify(a.clone(), "hey"), b.clone());
+    eg.union(justify(a.clone(), "a = b"), b.clone());
 
     dbg!(eg.get_g_between(fa.clone(), fb.clone()));
     assert!(false);
