@@ -95,4 +95,12 @@ impl<S: Semilattice> Unionfind<S> {
         let g = S::G::compose(&g1.inverse(), &g2);
         self.v[x1.0].s.contains_self_edge(&g)
     }
+
+    pub fn get_g_between(&self, x1: (S::G, Id), x2: (S::G, Id)) -> Option<S::G> {
+        let (g1, x1) = self.find(x1);
+        let (g2, x2) = self.find(x2);
+        if x1 != x2 { return None }
+        let g = S::G::compose(&g1.inverse(), &g2);
+        Some(g)
+    }
 }

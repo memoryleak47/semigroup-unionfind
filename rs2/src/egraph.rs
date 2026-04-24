@@ -65,4 +65,8 @@ impl<N: Analysis> EGraph<N> {
     pub fn find(&self, x: (N::G, Id)) -> (N::G, Id) {
         self.uf.find(x)
     }
+
+    pub fn get_g_between(&self, x1: (N::G, Id), x2: (N::G, Id)) -> Option<N::G> {
+        self.uf.get_g_between(x1, x2)
+    }
 }

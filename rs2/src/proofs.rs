@@ -139,6 +139,7 @@ fn test_proofs() {
 
     let asym = Symbol::new("a");
     let bsym = Symbol::new("b");
+    let csym = Symbol::new("c");
 
     let fsym = Symbol::new("f");
 
@@ -164,8 +165,7 @@ fn test_proofs() {
 
     eg.union(justify(a.clone(), "hey"), b.clone());
 
-    dbg!(eg.find(fa));
-    dbg!(eg.find(fb));
+    dbg!(eg.get_g_between(fa.clone(), fb.clone()));
     assert!(false);
 }
 
