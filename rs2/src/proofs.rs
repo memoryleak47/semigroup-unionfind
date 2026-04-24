@@ -47,8 +47,8 @@ fn mk_trans(x: Proof, y: Proof) -> Proof {
 }
 
 fn mk_sym(x: Proof) -> Proof {
-    if let ProofObj::Sym(xx) = &*x && let ProofObj::Sym(xxx) = &**xx {
-        xxx.clone()
+    if let ProofObj::Sym(xx) = &*x {
+        xx.clone()
     } else if is_refl(&x) {
         mk_refl()
     } else {
