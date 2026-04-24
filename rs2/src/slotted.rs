@@ -234,7 +234,7 @@ impl Analysis for Slotted {
         }
     }
 
-    fn mk(n: &Self::L, uf: &Unionfind<Self::S>) -> Self::S {
+    fn mk(n: &Self::L, _id: Id, uf: &Unionfind<Self::S>) -> Self::S {
         let slots = match n {
             SlottedLang::Lam(x, b) => {
                 let mut slots = uf.get_semilattice(b).slots;

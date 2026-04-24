@@ -23,12 +23,16 @@ impl<S: Semilattice> Unionfind<S> {
     }
 
     pub fn makeset(&mut self, s: S) -> Id {
-        let i = Id(self.v.len());
+        let i = self.next_id();
         self.v.push(UFClass {
             s,
             leader: (S::G::identity(), i),
         });
         i
+    }
+
+    pub fn next_id(&self) -> Id {
+        Id(self.v.len())
     }
 
     pub fn find1(&self, x: Id) -> (S::G, Id) {

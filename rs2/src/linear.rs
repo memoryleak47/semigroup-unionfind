@@ -116,7 +116,7 @@ impl Analysis for LinearAnalysis {
         }
     }
 
-    fn mk(n: &Self::L, uf: &Unionfind<Self::S>) -> Self::S {
+    fn mk(n: &Self::L, id: Id, uf: &Unionfind<Self::S>) -> Self::S {
         match n {
             LinearLang::Add([x, y]) => todo!(),
             LinearLang::Mul([x, y]) => todo!(),

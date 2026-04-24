@@ -21,7 +21,7 @@ impl<N: Analysis> EGraph<N> {
             // -> n == g*g2*x
             (N::G::compose(&g, &g2), *x)
         } else {
-            let s = N::mk(&n2, &self.uf);
+            let s = N::mk(&n2, self.uf.next_id(), &self.uf);
             let x = self.uf.makeset(s);
             self.hashcons.insert(n2, (N::G::identity(), x));
             (g, x)
@@ -45,7 +45,7 @@ impl<N: Analysis> EGraph<N> {
                 let gn = N::G::compose(&g2.inverse(), &g);
                 // -> n2 = gn*x
 
-                let s = N::mk(&n2, &self.uf);
+                let s = N::mk(&n2, x, &self.uf);
                 dirty |= self.uf.merge_s((gn.clone(), x), s);
 
                 if let Some((g3, x3)) = self.hashcons.get(&n2) {
@@ -60,5 +60,9 @@ impl<N: Analysis> EGraph<N> {
 
     pub fn is_equal(&self, x: (N::G, Id), y: (N::G, Id)) -> bool {
         self.uf.is_equal(x, y)
+    }
+
+    pub fn find(&self, x: (N::G, Id)) -> (N::G, Id) {
+        self.uf.find(x)
     }
 }
