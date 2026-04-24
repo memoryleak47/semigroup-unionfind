@@ -71,36 +71,15 @@ struct ProofLang {
 }
 
 #[derive(Clone)]
-struct ProofData {
-    // This helps to reconstruct the "original term" for every Id.
-    syn: HashMap<Id, ProofLang>,
-}
+struct ProofData;
 
 impl Semilattice for ProofData {
     type G = Proof;
 
-    fn act(g: &Self::G, s: &Self) -> Self {
-        s.clone()
-    }
-
-    fn merge(&mut self, other: Self) -> bool {
-        let mut dirty = false;
-        for (k, n) in &other.syn {
-            if self.syn.contains_key(&k) { continue }
-            self.syn.insert(*k, n.clone());
-            dirty = true
-        }
-
-        dirty
-    }
-
-    fn insert_self_edge(&mut self, g: Self::G) {
-        // We ignore redundant proofs. We assume proof irrelevance.
-    }
-
-    fn contains_self_edge(&self, g: &Self::G) -> bool {
-        true
-    }
+    fn act(g: &Self::G, s: &Self) -> Self { ProofData }
+    fn merge(&mut self, other: Self) -> bool { false }
+    fn insert_self_edge(&mut self, g: Self::G) {}
+    fn contains_self_edge(&self, g: &Self::G) -> bool { true }
 }
 
 struct ProofAnalysis;
@@ -126,11 +105,7 @@ impl Analysis for ProofAnalysis {
         (p, n)
     }
 
-    fn mk(n: &Self::L, id: Id, uf: &Unionfind<Self::S>) -> Self::S {
-        ProofData {
-            syn: std::iter::once((id, n.clone())).collect(),
-        }
-    }
+    fn mk(n: &Self::L, id: Id, uf: &Unionfind<Self::S>) -> Self::S { ProofData }
 }
 
 #[test]
