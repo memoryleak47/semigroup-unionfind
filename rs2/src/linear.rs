@@ -112,7 +112,8 @@ impl Analysis for LinearAnalysis {
         match n {
             LinearLang::Add([x, y]) => (Linear::identity(), LinearLang::Add([uf.find(*x), uf.find(*y)])), // TODO more canon!
             LinearLang::Mul([x, y]) => (Linear::identity(), LinearLang::Mul([uf.find(*x), uf.find(*y)])), // TODO more canon!
-            n => (Linear::identity(), *n),
+            LinearLang::Const(c) => (Linear { factor: f(1.0), offset: *c }, LinearLang::Const(f(0.0))),
+            LinearLang::Symbol(s) => (Linear::identity(), LinearLang::Symbol(*s)),
         }
     }
 
