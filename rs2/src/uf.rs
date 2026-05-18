@@ -103,4 +103,13 @@ impl<S: Semilattice> Unionfind<S> {
         let g = S::G::compose(&g1.inverse(), &g2);
         Some(g)
     }
+
+    pub fn classes(&self) -> Box<[Id]> {
+        self.v.iter().enumerate()
+            .filter_map(|(i, x)|
+                if x.leader.1 == Id(i) {
+                    Some(Id(i))
+                } else { None })
+            .collect()
+    }
 }

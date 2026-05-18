@@ -109,6 +109,94 @@ impl Analysis for ProofAnalysis {
 
     fn mk(n: &Self::L, id: Id, uf: &Unionfind<Self::S>) -> Self::S { ProofData }
 }
+fn justify((p, x): (Proof, Id), j: &str) -> (Proof, Id) {
+    let j = Symbol::from(j);
+    let p2 = Rc::new(ProofObj::User(j));
+    (Proof::compose(&p, &p2), x)
+}
+
+/// E-Matching
+
+#[derive(PartialEq, Eq, Hash, Clone)]
+enum Pattern {
+    PVar(PVar),
+    Node(Symbol, Box<[Pattern]>),
+}
+
+type PVar = String;
+type Subst = HashMap<PVar, Id>;
+type L = ProofLang;
+type G = Proof;
+
+// semantics:
+// a := applying the subst to the pattern
+// b := canonical term of x
+// proof translates a to b
+fn ematch(x: Id, pat: &Pattern, eg: &EGraph<ProofAnalysis>) -> Vec<(Proof, Subst)> {
+    ematch_impl(x, pat, eg, &Subst::new())
+}
+
+fn ematch_impl(x: Id, pat: &Pattern, eg: &EGraph<ProofAnalysis>, subst: &Subst) -> Vec<(Proof, Subst)> {
+    match pat {
+        Pattern::PVar(v) => {
+            let mut subst = subst.clone();
+            if let Some(a) = subst.get(v) {
+                if *a != x { return Vec::new() }
+            } else {
+                subst.insert(v.clone(), x);
+            }
+            vec![(G::identity(), subst)]
+        },
+        Pattern::Node(f, subpats) => {
+            let mut out = Vec::new();
+            for (g, n) in eg.nodes_of_bare(x) {
+                // g*n = i
+                if n.f != *f { continue }
+
+                let mut acc = vec![(g, subst.clone())];
+                for ((grefl, subid), subpat) in n.args.iter().zip(subpats.iter()) {
+                    assert_eq!(*grefl, G::identity());
+                    for (g, subst) in std::mem::take(&mut acc) {
+                        acc.extend(ematch_impl(*subid, subpat, eg, &subst));
+                    }
+                }
+                out.extend(acc);
+            }
+            out
+        },
+    }
+}
+
+fn instantiate(pattern: &Pattern, subst: &Subst, eg: &mut EGraph<ProofAnalysis>) -> (Proof, Id) {
+    match pattern {
+        Pattern::PVar(v) => (G::identity(), subst[v]),
+        Pattern::Node(f, pargs) => {
+            let f = *f;
+            let mut args = Vec::new();
+            for p in pargs {
+                args.push(instantiate(p, subst, eg));
+            }
+            let args = args.into_boxed_slice();
+            eg.add(&ProofLang { f, args })
+        }
+    }
+}
+
+fn eqsat(eg: &mut EGraph<ProofAnalysis>, rules: &[(Pattern, Pattern)], n: usize) {
+    for _ in 0..n {
+        for (rule_id, (lhs, rhs)) in rules.iter().enumerate() {
+            for x in eg.classes() {
+                for (p, subst) in ematch(x, lhs, eg) {
+                    let lhs = instantiate(lhs, &subst, eg);
+                    let rhs = instantiate(rhs, &subst, eg);
+                    eg.union(justify(lhs.clone(), &format!("{rule_id}")), rhs.clone());
+                }
+            }
+        }
+    }
+}
+
+/// Tests
 
 #[test]
 fn test_proofs() {
@@ -143,11 +231,6 @@ fn test_proofs() {
     eg.union(justify(a.clone(), "a = b"), b.clone());
 
     dbg!(eg.get_g_between(fa.clone(), fb.clone()));
-    assert!(false);
 }
 
-fn justify((p, x): (Proof, Id), j: &str) -> (Proof, Id) {
-    let j = Symbol::from(j);
-    let p2 = Rc::new(ProofObj::User(j));
-    (Proof::compose(&p, &p2), x)
-}
+

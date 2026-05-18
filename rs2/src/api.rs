@@ -25,7 +25,7 @@ pub trait Semilattice {
 pub trait Analysis {
     type G: Group;
     type S: Semilattice<G=Self::G>;
-    type L: Eq + Hash;
+    type L: Eq + Hash + Clone;
 
     fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L);
 

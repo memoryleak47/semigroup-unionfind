@@ -69,4 +69,23 @@ impl<N: Analysis> EGraph<N> {
     pub fn get_g_between(&self, x1: (N::G, Id), x2: (N::G, Id)) -> Option<N::G> {
         self.uf.get_g_between(x1, x2)
     }
+
+    pub fn nodes_of(&self, (g, x): (N::G, Id)) -> Box<[(N::G, N::L)]> {
+        self.nodes_of_bare(x).into_iter().map(|(g2, n)| (N::G::compose(&g, &g2), n)).collect()
+    }
+
+    pub fn nodes_of_bare(&self, x: Id) -> Box<[(N::G, N::L)]> {
+        // x has to be a leader.
+        assert!(self.find((N::G::identity(), x)).1 == x);
+
+        self.hashcons.iter().filter_map(|(n, (g, i))| {
+            if *i == x {
+                Some((g.inverse(), n.clone()))
+            } else { None }
+        }).collect()
+    }
+
+    pub fn classes(&self) -> Box<[Id]> {
+        self.uf.classes()
+    }
 }
