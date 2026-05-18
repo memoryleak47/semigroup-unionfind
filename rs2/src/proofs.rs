@@ -214,12 +214,12 @@ fn apply_proof_impl(term: &Term, p: &Proof, rules: &Rules, rev: bool) -> Term {
         ProofObj::Sym(p) => apply_proof_impl(term, p, rules, !rev),
         ProofObj::Trans(p1, p2) => {
             if rev {
-                let term = apply_proof_impl(term, p2, rules, rev);
-                let term = apply_proof_impl(&term, p1, rules, rev);
-                term
-            } else {
                 let term = apply_proof_impl(term, p1, rules, rev);
                 let term = apply_proof_impl(&term, p2, rules, rev);
+                term
+            } else {
+                let term = apply_proof_impl(term, p2, rules, rev);
+                let term = apply_proof_impl(&term, p1, rules, rev);
                 term
             }
         },
@@ -324,6 +324,10 @@ fn eqsat_test(t1: &Term, t2: &Term, rules: &Rules, n: usize) {
         dbg!(&p);
         dbg!(&t1);
         dbg!(&t2);
+        dbg!(&x1);
+        dbg!(&x2);
+        dbg!(&eg.find(x1));
+        dbg!(&eg.find(x2));
     }
     assert_eq!(apply_proof(t1, &p, rules), t2.clone());
 }
