@@ -132,11 +132,11 @@ type G = Proof;
 // a := applying the subst to the pattern
 // b := canonical term of x
 // proof translates a to b
-fn ematch(x: Id, pat: &Pattern, eg: &EGraph<ProofAnalysis>) -> Vec<(Proof, Subst)> {
+fn ematch(x: Id, pat: &Pattern, eg: &EGraph<ProofAnalysis>) -> Vec<Subst> {
     ematch_impl(x, pat, eg, &Subst::new())
 }
 
-fn ematch_impl(x: Id, pat: &Pattern, eg: &EGraph<ProofAnalysis>, subst: &Subst) -> Vec<(Proof, Subst)> {
+fn ematch_impl(x: Id, pat: &Pattern, eg: &EGraph<ProofAnalysis>, subst: &Subst) -> Vec<Subst> {
     match pat {
         Pattern::PVar(v) => {
             let mut subst = subst.clone();
@@ -145,18 +145,18 @@ fn ematch_impl(x: Id, pat: &Pattern, eg: &EGraph<ProofAnalysis>, subst: &Subst) 
             } else {
                 subst.insert(v.clone(), x);
             }
-            vec![(G::identity(), subst)]
+            vec![subst]
         },
         Pattern::Node(f, subpats) => {
             let mut out = Vec::new();
-            for (g, n) in eg.nodes_of_bare(x) {
+            for (_, n) in eg.nodes_of_bare(x) {
                 // g*n = i
                 if n.f != *f { continue }
 
-                let mut acc = vec![(g, subst.clone())];
+                let mut acc = vec![subst.clone()];
                 for ((grefl, subid), subpat) in n.args.iter().zip(subpats.iter()) {
                     assert_eq!(*grefl, G::identity());
-                    for (g, subst) in std::mem::take(&mut acc) {
+                    for subst in std::mem::take(&mut acc) {
                         acc.extend(ematch_impl(*subid, subpat, eg, &subst));
                     }
                 }
@@ -184,9 +184,9 @@ fn instantiate(pattern: &Pattern, subst: &Subst, eg: &mut EGraph<ProofAnalysis>)
 
 fn eqsat(eg: &mut EGraph<ProofAnalysis>, rules: &[(String, &Pattern, &Pattern)], n: usize) {
     for _ in 0..n {
-        for (rule_name, lhs, rhs) in rules.iter(){
+        for (rule_name, lhs, rhs) in rules.iter() {
             for x in eg.classes() {
-                for (p, subst) in ematch(x, lhs, eg) {
+                for subst in ematch(x, lhs, eg) {
                     let lhs = instantiate(lhs, &subst, eg);
                     let rhs = instantiate(rhs, &subst, eg);
                     eg.union(justify(lhs.clone(), &format!("{rule_name}")), rhs.clone());
