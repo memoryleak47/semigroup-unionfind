@@ -360,9 +360,9 @@ fn test_proofs2() {
 #[test]
 fn test_proofs3() {
     let rule1 = (
-        Symbol::new("f(x,y) -> y"),
-        f(atom("x"), atom("y")),
-        atom("y"),
+        Symbol::new("f(?x,?y) -> ?y"),
+        f(pvar("?x"), pvar("?y")),
+        pvar("?y"),
     );
     let rule2 = (
         Symbol::new("x -> f(x,y)"),
@@ -425,6 +425,24 @@ fn test_proofs6() {
     );
     let t1 = atom("a");
     let t2 = atom("b");
+    let rules = &[rule1, rule2];
+    eqsat_test(t1, t2, rules, 2);
+}
+
+#[test]
+fn test_proofs7() {
+    let rule1 = (
+        Symbol::new("f(a,b) -> y"),
+        f(atom("a"), atom("b")),
+        atom("y"),
+    );
+    let rule2 = (
+        Symbol::new("x -> f(a,b)"),
+        atom("x"),
+        f(atom("a"), atom("b")),
+    );
+    let t1 = atom("x");
+    let t2 = atom("y");
     let rules = &[rule1, rule2];
     eqsat_test(t1, t2, rules, 2);
 }
