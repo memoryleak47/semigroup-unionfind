@@ -182,7 +182,7 @@ fn instantiate(pattern: &Pattern, subst: &Subst, eg: &mut EGraph<ProofAnalysis>)
     }
 }
 
-fn eqsat(eg: &mut EGraph<ProofAnalysis>, rules: &[(String, Pattern, Pattern)], n: usize) {
+fn eqsat(eg: &mut EGraph<ProofAnalysis>, rules: &[(String, &Pattern, &Pattern)], n: usize) {
     for _ in 0..n {
         for (rule_name, lhs, rhs) in rules.iter(){
             for x in eg.classes() {
@@ -198,66 +198,65 @@ fn eqsat(eg: &mut EGraph<ProofAnalysis>, rules: &[(String, Pattern, Pattern)], n
 
 /// Tests
 
+fn atom(s: &str) -> &'static Pattern {
+    Box::leak(Box::new(Pattern::Node(Symbol::new(s), Box::new([]))))
+}
+
+fn pvar(s: &str) -> &'static Pattern {
+    Box::leak(Box::new(Pattern::PVar(s.to_string())))
+}
+
+fn f(p1: &'static Pattern, p2: &'static Pattern) -> &'static Pattern {
+    Box::leak(Box::new(Pattern::Node(Symbol::new("f"), Box::new([p1.clone(), p2.clone()]))))
+}
+
+fn h(p: &'static Pattern) -> &'static Pattern {
+    Box::leak(Box::new(Pattern::Node(Symbol::new("h"), Box::new([p.clone()]))))
+}
+
+fn add_pat(pat: &Pattern, eg: &mut EGraph<ProofAnalysis>) -> (Proof, Id) {
+    match pat {
+        Pattern::PVar(_) => panic!("can't add pvar!"),
+        Pattern::Node(f, pargs) => {
+            let f = *f;
+            let mut args = Vec::new();
+            for p in pargs {
+                args.push(add_pat(p, eg));
+            }
+            let args = args.into_boxed_slice();
+            eg.add(&ProofLang { f, args })
+        },
+    }
+}
+
 #[test]
 fn test_proofs() {
     let eg: &mut EGraph<ProofAnalysis> = &mut EGraph::new();
 
-    let asym = Symbol::new("a");
-    let bsym = Symbol::new("b");
-    let csym = Symbol::new("c");
+    let a = add_pat(atom("a"), eg);
+    let b = add_pat(atom("b"), eg);
 
-    let fsym = Symbol::new("f");
-
-    let a = eg.add(&ProofLang {
-        f: asym,
-        args: Box::new([]),
-    });
-
-    let b = eg.add(&ProofLang {
-        f: bsym,
-        args: Box::new([]),
-    });
-
-    let fa = eg.add(&ProofLang {
-        f: fsym,
-        args: Box::new([a.clone()]),
-    });
-
-    let fb = eg.add(&ProofLang {
-        f: fsym,
-        args: Box::new([b.clone()]),
-    });
+    let ha = add_pat(h(atom("a")), eg);
+    let hb = add_pat(h(atom("b")), eg);
 
     eg.union(justify(a.clone(), "a = b"), b.clone());
 
-    dbg!(eg.get_g_between(fa.clone(), fb.clone()));
+    dbg!(eg.get_g_between(ha.clone(), hb.clone()));
 }
-
 
 #[test]
 fn test_proofs2() {
     let eg: &mut EGraph<ProofAnalysis> = &mut EGraph::new();
 
-    let asym = Symbol::new("a");
-    let fsym = Symbol::new("f");
+    let a = add_pat(atom("a"), eg);
+    let ha = add_pat(h(atom("a")), eg);
 
-    let a = eg.add(&ProofLang {
-        f: asym,
-        args: Box::new([]),
-    });
+    let rule = (
+        String::from("f(?a) -> ?a"),
+        h(pvar("?a")),
+        pvar("?a")
+    );
+    eqsat(eg, &[rule], 1);
 
-    let fa = eg.add(&ProofLang {
-        f: fsym,
-        args: Box::new([a.clone()]),
-    });
-
-    let name = format!("f(X) -> X");
-    let qa = Pattern::PVar(format!("?a"));
-    let lhs = Pattern::Node(fsym, Box::new([qa.clone()]));
-    let rhs = qa;
-
-    eqsat(eg, &[(name, lhs, rhs)], 1);
-
-    dbg!(eg.get_g_between(fa.clone(), a.clone()));
-    assert!(false);
+    dbg!(eg.get_g_between(ha.clone(), a.clone()));
 }
