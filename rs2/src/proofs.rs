@@ -6,7 +6,7 @@ use std::collections::HashMap;
 enum ProofObj {
     Refl,
     Sym(Proof),
-    Trans(Proof, Proof),
+    Trans(Proof, Proof), // works in compose order. So Trans(a, b) first applies b, then a.
     Congr(Box<[Proof]>),
     Rule(Symbol),
 }
