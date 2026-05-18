@@ -8,7 +8,7 @@ enum ProofObj {
     Sym(Proof),
     Trans(Proof, Proof),
     Congr(Box<[Proof]>),
-    User(Symbol), // the symbol contains information about the rule application
+    Rule(Symbol),
 }
 
 type Proof = Rc<ProofObj>;
@@ -110,7 +110,7 @@ impl Analysis for ProofAnalysis {
     fn mk(n: &Self::L, id: Id, uf: &Unionfind<Self::S>) -> Self::S { ProofData }
 }
 fn justify((p, x): (Proof, Id), j: Symbol) -> (Proof, Id) {
-    let p2 = Rc::new(ProofObj::User(j));
+    let p2 = Rc::new(ProofObj::Rule(j));
     (Proof::compose(&p, &p2), x)
 }
 
@@ -232,7 +232,7 @@ fn apply_proof_impl(term: &Term, p: &Proof, rules: &Rules, rev: bool) -> Term {
             }
             Term::Node(*f, outs.into_boxed_slice())
         },
-        ProofObj::User(r) => {
+        ProofObj::Rule(r) => {
             let (_, lhs, rhs) = rules.iter().find(|(name, _, _)| name == r).unwrap();
             let subst = &mut TermSubst::new();
             term_match(term, lhs, subst);
