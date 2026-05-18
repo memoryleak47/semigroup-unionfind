@@ -385,3 +385,16 @@ fn test_proofs4() {
     let rules = &[rule1, rule2, rule3];
     eqsat_test(t1, t2, rules, 4);
 }
+
+#[test]
+fn test_proofs5() {
+    let rule1 = (
+        Symbol::new("r1"),
+        atom("a"),
+        atom("b"),
+    );
+    let t1 = atom("b");
+    let t2 = atom("a");
+    let rules = &[rule1];
+    eqsat_test(t1, t2, rules, 1);
+}
