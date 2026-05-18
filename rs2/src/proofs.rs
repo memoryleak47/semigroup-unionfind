@@ -348,6 +348,24 @@ fn test_proofs2() {
 #[test]
 fn test_proofs3() {
     let rule1 = (
+        Symbol::new("rule1"),
+        f(pvar("?a"), pvar("?b")),
+        pvar("?b")
+    );
+    let rule2 = (
+        Symbol::new("rule2"),
+        atom("x"),
+        f(atom("x"), atom("y")),
+    );
+    let t1 = atom("x");
+    let t2 = atom("y");
+    let rules = &[rule1, rule2];
+    eqsat_test(t1, t2, rules, 3);
+}
+
+#[test]
+fn test_proofs4() {
+    let rule1 = (
         Symbol::new("f(?a, ?b) -> f(?a, h(?b))"),
         f(pvar("?a"), pvar("?b")),
         f(pvar("?a"), h(pvar("?b"))),
