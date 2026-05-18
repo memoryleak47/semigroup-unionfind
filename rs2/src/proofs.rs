@@ -234,6 +234,7 @@ fn apply_proof_impl(term: &Term, p: &Proof, rules: &Rules, rev: bool) -> Term {
         },
         ProofObj::Rule(r) => {
             let (_, lhs, rhs) = rules.iter().find(|(name, _, _)| name == r).unwrap();
+            let (lhs, rhs) = if rev { (rhs, lhs) } else { (lhs, rhs) };
             let subst = &mut TermSubst::new();
             term_match(term, lhs, subst);
             pattern_apply(rhs, subst)
@@ -318,6 +319,11 @@ fn eqsat_test(t1: &Term, t2: &Term, rules: &Rules, n: usize) {
 
     eqsat(eg, rules, n);
     let p = eg.get_g_between(x1.clone(), x2.clone()).unwrap();
+    if false {
+        dbg!(&p);
+        dbg!(&t1);
+        dbg!(&t2);
+    }
     assert_eq!(apply_proof(t1, &p, rules), t2.clone());
 }
 
