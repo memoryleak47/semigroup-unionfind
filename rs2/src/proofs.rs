@@ -191,14 +191,16 @@ fn eqsat(eg: &mut EGraph<ProofAnalysis>, rules: &Rules, n: usize) {
         for (rule_name, lhs, rhs) in rules.iter() {
             for x in eg.classes() {
                 for subst in ematch(x, lhs, eg) {
-                    let lhs = instantiate(lhs, &subst, eg);
-                    let rhs = instantiate(rhs, &subst, eg);
-                    future_unions.push((justify(lhs.clone(), *rule_name), rhs.clone()));
+                    future_unions.push((*rule_name, lhs, rhs, subst));
                 }
             }
         }
-        for (x, y) in future_unions {
-            eg.union(x, y);
+        for (rule_name, lhs, rhs, subst) in future_unions {
+            let lhs = instantiate(lhs, &subst, eg);
+            let rhs = instantiate(rhs, &subst, eg);
+
+            let lhs = justify(lhs.clone(), rule_name);
+            eg.union(lhs, rhs);
         }
     }
 }
@@ -343,7 +345,7 @@ fn test_proofs() {
     );
     let t1 = h(atom("a"));
     let t2 = h(atom("b"));
-    eqsat_test(t1, t2, &[rule], 1);
+    eqsat_test(t1, t2, &[rule], 3);
 }
 
 #[test]
@@ -468,5 +470,46 @@ fn test_proofs8() {
     let t1 = f(h(atom("a")), h(atom("b")));
     let t2 = h(h(f(atom("b"), atom("a"))));
     let rules = &[rule1, rule2, rule3];
-    eqsat_test(t1, t2, rules, 2);
+    eqsat_test(t1, t2, rules, 3);
+}
+
+#[test]
+fn test_proofs9() {
+    let rule1 = (
+        Symbol::new("f(?a, ?b) -> f(?b, ?a)"),
+        f(pvar("?a"), pvar("?b")),
+        f(pvar("?b"), pvar("?a")),
+    );
+    let rule2 = (
+        Symbol::new("f(f(?a, ?b), ?c) -> f(?a, f(?b, ?c))"),
+        f(f(pvar("?a"), pvar("?b")), pvar("?c")),
+        f(pvar("?a"), f(pvar("?b"), pvar("?c"))),
+    );
+    let rule3 = (
+        Symbol::new("f(?a, h(?a)) -> h(f(?a, ?a))"),
+        f(pvar("?a"), h(pvar("?a"))),
+        h(f(pvar("?a"), pvar("?a"))),
+    );
+    let t1 = f(f(atom("x"), h(atom("x"))), atom("y"));
+    let t2 = f(atom("y"), h(f(atom("x"), atom("x"))));
+    let rules = &[rule1, rule2, rule3];
+    eqsat_test(t1, t2, rules, 1);
+}
+
+#[test]
+fn test_proofs10() {
+    let rule1 = (
+        Symbol::new("f(?a, h(?b)) -> h(f(?a, ?b))"),
+        f(pvar("?a"), h(pvar("?b"))),
+        h(f(pvar("?a"), pvar("?b"))),
+    );
+    let rule2 = (
+        Symbol::new("f(?a, ?b) -> f(?b, ?a)"),
+        f(pvar("?a"), pvar("?b")),
+        f(pvar("?b"), pvar("?a")),
+    );
+    let t1 = f(h(h(h(h(h(atom("x")))))), atom("y"));
+    let t2 = f(atom("x"), h(h(h(h(h(atom("y")))))));
+    let rules = &[rule1, rule2];
+    eqsat_test(t1, t2, rules, 10);
 }
