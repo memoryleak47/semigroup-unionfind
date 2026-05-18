@@ -432,14 +432,14 @@ fn test_proofs6() {
 #[test]
 fn test_proofs7() {
     let rule1 = (
-        Symbol::new("f(a,b) -> y"),
-        f(atom("a"), atom("b")),
+        Symbol::new("c -> y"),
+        atom("c"),
         atom("y"),
     );
     let rule2 = (
-        Symbol::new("x -> f(a,b)"),
+        Symbol::new("x -> c"),
         atom("x"),
-        f(atom("a"), atom("b")),
+        atom("c"),
     );
     let t1 = atom("x");
     let t2 = atom("y");
