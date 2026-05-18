@@ -254,6 +254,8 @@ fn term_match(term: &Term, pat: &Pattern, subst: &mut TermSubst) {
         },
         Pattern::Node(p_f, p_args) => {
             let Term::Node(t_f, t_args) = term else { panic!() };
+            assert_eq!(p_f, t_f);
+            assert_eq!(p_args.len(), t_args.len());
             for (tt, pp) in t_args.iter().zip(p_args) {
                 term_match(tt, pp, subst);
             }
@@ -334,11 +336,34 @@ fn test_proofs() {
 #[test]
 fn test_proofs2() {
     let rule = (
-        Symbol::new("f(?a) -> ?a"),
+        Symbol::new("h(?a) -> ?a"),
         h(pvar("?a")),
         pvar("?a")
     );
     let t1 = h(atom("a"));
     let t2 = atom("a");
     eqsat_test(t1, t2, &[rule], 1);
+}
+
+#[test]
+fn test_proofs3() {
+    let rule1 = (
+        Symbol::new("f(?a, ?b) -> f(?a, h(?b))"),
+        f(pvar("?a"), pvar("?b")),
+        f(pvar("?a"), h(pvar("?b"))),
+    );
+    let rule2 = (
+        Symbol::new("f(?a, ?b) -> f(h(?a), ?b)"),
+        f(pvar("?a"), pvar("?b")),
+        f(h(pvar("?a")), pvar("?b")),
+    );
+    let rule3 = (
+        Symbol::new("f(h(?a), h(?b)) -> f(h(?b), h(?a))"),
+        f(h(pvar("?a")), h(pvar("?b"))),
+        f(h(pvar("?b")), h(pvar("?a"))),
+    );
+    let t1 = f(atom("x"), atom("y"));
+    let t2 = f(atom("y"), atom("x"));
+    let rules = &[rule1, rule2, rule3];
+    eqsat_test(t1, t2, rules, 4);
 }
