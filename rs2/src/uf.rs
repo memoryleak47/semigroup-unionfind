@@ -59,11 +59,6 @@ impl<S: Semilattice> Unionfind<S> {
         let (g1, x1) = self.find(x1);
         let (g2, x2) = self.find(x2);
 
-        // x1 < x2 should hold.
-        let ((g1, x1), (g2, x2)) =
-            if x1 < x2 { ((g1, x1), (g2, x2)) }
-            else { ((g2, x2), (g1, x1)) };
-
         // g1*x1 = g2*x2
         // g2⁻¹*g1*x1 = x2
         let gg = S::G::compose(&g2.inverse(), &g1);
