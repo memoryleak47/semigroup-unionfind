@@ -72,7 +72,7 @@ struct ProofLang {
     args: Box<[(Proof, Id)]>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct ProofData;
 
 impl Semilattice for ProofData {
@@ -319,7 +319,8 @@ fn eqsat_test(t1: &Term, t2: &Term, rules: &Rules, n: usize) {
 
     eqsat(eg, rules, n);
     let p = eg.get_g_between(x1.clone(), x2.clone()).unwrap();
-    if false {
+    if true {
+        eg.dump();
         dbg!(&p);
         dbg!(&t1);
         dbg!(&t2);
@@ -366,7 +367,7 @@ fn test_proofs3() {
     let t1 = atom("x");
     let t2 = atom("y");
     let rules = &[rule1, rule2];
-    eqsat_test(t1, t2, rules, 3);
+    eqsat_test(t1, t2, rules, 2);
 }
 
 #[test]
@@ -403,4 +404,22 @@ fn test_proofs5() {
     let t2 = atom("a");
     let rules = &[rule1];
     eqsat_test(t1, t2, rules, 1);
+}
+
+#[test]
+fn test_proofs6() {
+    let rule1 = (
+        Symbol::new("rule1"),
+        atom("a"),
+        atom("b"),
+    );
+    let rule2 = (
+        Symbol::new("rule2"),
+        atom("b"),
+        atom("c")
+    );
+    let t1 = atom("a");
+    let t2 = atom("b");
+    let rules = &[rule1, rule2];
+    eqsat_test(t1, t2, rules, 2);
 }

@@ -96,11 +96,15 @@ impl<S: Semilattice> Unionfind<S> {
         self.v[x1.0].s.contains_self_edge(&g)
     }
 
+    // returns the g with g*x1 = x2.
+    //   g*x1 = x2
+    //   <-> g*(g1*a1) = g2*a2
+    //   <-> which works via g = g2*g1⁻¹, given a1=a2
     pub fn get_g_between(&self, x1: (S::G, Id), x2: (S::G, Id)) -> Option<S::G> {
-        let (g1, x1) = self.find(x1);
-        let (g2, x2) = self.find(x2);
-        if x1 != x2 { return None }
-        let g = S::G::compose(&g1.inverse(), &g2);
+        let (g1, a1) = self.find(x1);
+        let (g2, a2) = self.find(x2);
+        if a1 != a2 { return None }
+        let g = S::G::compose(&g2, &g1.inverse());
         Some(g)
     }
 
@@ -111,5 +115,14 @@ impl<S: Semilattice> Unionfind<S> {
                     Some(Id(i))
                 } else { None })
             .collect()
+    }
+
+    pub fn dump(&self) where S::G: Debug, S: Debug {
+        for (x, class) in self.v.iter().enumerate() {
+            let s = &class.s;
+            let leader = &class.leader;
+            let x = Id(x);
+            println!("uf: {x:?} -> {leader:?} with {s:?}");
+        }
     }
 }

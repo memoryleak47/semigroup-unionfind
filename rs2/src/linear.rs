@@ -4,7 +4,7 @@ use ordered_float::OrderedFloat;
 type F64 = OrderedFloat<f64>;
 fn f(x: f64) -> F64 { OrderedFloat(x) }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 struct Linear {
     factor: F64, // is never allowed to be zero!
     offset: F64

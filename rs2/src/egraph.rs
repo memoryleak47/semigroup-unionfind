@@ -88,4 +88,11 @@ impl<N: Analysis> EGraph<N> {
     pub fn classes(&self) -> Box<[Id]> {
         self.uf.classes()
     }
+
+    pub fn dump(&self) where N::S: Debug, N::G: Debug, N::L: Debug {
+        self.uf.dump();
+        for (n, i) in &self.hashcons {
+            println!("hc: {n:?} -> {i:?}");
+        }
+    }
 }
