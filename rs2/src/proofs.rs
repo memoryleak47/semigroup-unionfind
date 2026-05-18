@@ -109,9 +109,10 @@ impl Analysis for ProofAnalysis {
 
     fn mk(n: &Self::L, id: Id, uf: &Unionfind<Self::S>) -> Self::S { ProofData }
 }
+
 fn justify((p, x): (Proof, Id), j: Symbol) -> (Proof, Id) {
     let p2 = Rc::new(ProofObj::Rule(j));
-    (Proof::compose(&p, &p2), x)
+    (Proof::compose(&p2, &p), x)
 }
 
 /// E-Matching
