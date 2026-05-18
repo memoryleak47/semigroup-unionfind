@@ -311,6 +311,7 @@ fn add_term(term: &Term, eg: &mut EGraph<ProofAnalysis>) -> (Proof, Id) {
 
 type Rules<'a> = [(Symbol, &'a Pattern, &'a Pattern)];
 
+const DEBUGGING: bool = true;
 fn eqsat_test(t1: &Term, t2: &Term, rules: &Rules, n: usize) {
     let eg: &mut EGraph<ProofAnalysis> = &mut EGraph::new();
 
@@ -318,16 +319,16 @@ fn eqsat_test(t1: &Term, t2: &Term, rules: &Rules, n: usize) {
     let x2 = add_term(t2, eg);
 
     eqsat(eg, rules, n);
-    let p = eg.get_g_between(x1.clone(), x2.clone()).unwrap();
-    if true {
+    if DEBUGGING {
         eg.dump();
-        dbg!(&p);
-        dbg!(&t1);
-        dbg!(&t2);
         dbg!(&x1);
         dbg!(&x2);
-        dbg!(&eg.find(x1));
-        dbg!(&eg.find(x2));
+        dbg!(&eg.find(x1.clone()));
+        dbg!(&eg.find(x2.clone()));
+    }
+    let p = eg.get_g_between(x1.clone(), x2.clone()).unwrap();
+    if DEBUGGING {
+        dbg!(&p);
     }
     assert_eq!(apply_proof(t1, &p, rules), t2.clone());
 }
@@ -359,12 +360,12 @@ fn test_proofs2() {
 #[test]
 fn test_proofs3() {
     let rule1 = (
-        Symbol::new("rule1"),
-        f(pvar("?a"), pvar("?b")),
-        pvar("?b")
+        Symbol::new("f(x,y) -> y"),
+        f(atom("x"), atom("y")),
+        atom("y"),
     );
     let rule2 = (
-        Symbol::new("rule2"),
+        Symbol::new("x -> f(x,y)"),
         atom("x"),
         f(atom("x"), atom("y")),
     );

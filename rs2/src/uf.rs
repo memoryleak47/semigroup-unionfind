@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Hash, Debug, PartialOrd, Ord)]
 pub struct Id(usize);
 
 struct UFClass<S: Semilattice> {
@@ -59,10 +59,15 @@ impl<S: Semilattice> Unionfind<S> {
         let (g1, x1) = self.find(x1);
         let (g2, x2) = self.find(x2);
 
+        // x1 < x2 should hold.
+        let ((g1, x1), (g2, x2)) =
+            if x1 < x2 { ((g1, x1), (g2, x2)) }
+            else { ((g2, x2), (g1, x1)) };
+
         // g1*x1 = g2*x2
-        // x1 = g1⁻¹*g2*x2
-        let gg = S::G::compose(&g1.inverse(), &g2);
-        // x1 = gg * x2
+        // g2⁻¹*g1*x1 = x2
+        let gg = S::G::compose(&g2.inverse(), &g1);
+        // x2 = gg * x1
 
         if x1 == x2 {
             if !self.v[x1.0].s.contains_self_edge(&gg) {
@@ -70,9 +75,9 @@ impl<S: Semilattice> Unionfind<S> {
                 true
             } else { false }
         } else {
-            let acted = S::act(&gg.inverse(), &self.v[x1.0].s); // gg⁻¹*x1
-            self.v[x2.0].s.merge(acted);
-            self.v[x1.0].leader = (gg, x2);
+            let acted = S::act(&gg.inverse(), &self.v[x2.0].s); // gg⁻¹*x2
+            self.v[x1.0].s.merge(acted);
+            self.v[x2.0].leader = (gg, x1);
             true
         }
     }

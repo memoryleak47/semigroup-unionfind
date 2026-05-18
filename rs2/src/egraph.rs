@@ -37,6 +37,7 @@ impl<N: Analysis> EGraph<N> {
         loop {
             let mut dirty = false;
             for (n, (g, x)) in std::mem::take(&mut self.hashcons) {
+                let (g, x) = self.find((g, x));
                 // n == g*x
                 let (g2, n2) = N::canon(&n, &self.uf);
                 // n == g2*n2
