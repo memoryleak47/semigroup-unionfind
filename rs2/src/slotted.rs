@@ -172,7 +172,7 @@ impl Analysis for Slotted {
     type S = SlottedData;
     type L = SlottedLang;
 
-    fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L) {
+    fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Either<Self::L, Id>) {
         match n {
             SlottedLang::Lam(x, b) => {
                 let (g, b) = uf.find(b.clone());
@@ -190,7 +190,7 @@ impl Analysis for Slotted {
                 let d = complete(d);
                 let m = SlotMap::compose(&d, &g);
                 let m = canon((m, b), uf);
-                (d.inverse(), SlottedLang::Lam(0, (m, b)))
+                (d.inverse(), Either::L(SlottedLang::Lam(0, (m, b))))
             },
             SlottedLang::App(x1, x2) => {
                 let (g1, i1) = uf.find(x1.clone());
@@ -221,16 +221,16 @@ impl Analysis for Slotted {
                 let m2 = SlotMap::compose(&d, &g2);
                 let m2 = canon((m2, i2), uf);
 
-                (d.inverse(), SlottedLang::App((m1, i1), (m2, i2)))
+                (d.inverse(), Either::L(SlottedLang::App((m1, i1), (m2, i2))))
             },
             SlottedLang::Var(x) => {
-                if *x == 0 { (SlotMap::identity(), n.clone()) }
+                if *x == 0 { (SlotMap::identity(), Either::L(n.clone())) }
                 else {
                     let g = SlotMap::mk([(*x, 0), (0, *x)].into_iter());
-                    (g, SlottedLang::Var(0))
+                    (g, Either::L(SlottedLang::Var(0)))
                 }
             },
-            SlottedLang::Sym(_) => (SlotMap::identity(), n.clone()),
+            SlottedLang::Sym(_) => (SlotMap::identity(), Either::L(n.clone())),
         }
     }
 

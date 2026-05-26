@@ -91,7 +91,7 @@ impl Analysis for ProofAnalysis {
     type S = ProofData;
     type L = ProofLang;
 
-    fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L) {
+    fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Either<Self::L, Id>) {
         let mut proofs = Vec::new();
         let mut args = Vec::new();
         for x in &n.args {
@@ -104,7 +104,7 @@ impl Analysis for ProofAnalysis {
             f: n.f,
             args: args.into(),
         };
-        (p, n)
+        (p, Either::L(n))
     }
 
     fn mk(n: &Self::L, id: Id, uf: &Unionfind<Self::S>) -> Self::S { ProofData }

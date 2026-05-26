@@ -22,12 +22,17 @@ pub trait Semilattice {
     fn contains_self_edge(&self, g: &Self::G) -> bool;
 }
 
+pub enum Either<L, R> {
+    L(L),
+    R(R),
+}
+
 pub trait Analysis {
     type G: Group;
     type S: Semilattice<G=Self::G>;
     type L: Eq + Hash + Clone;
 
-    fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L);
+    fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Either<Self::L, Id>);
 
     // should only be called on e-nodes after they have been given `canon`.
     fn mk(n: &Self::L, id: Id, uf: &Unionfind<Self::S>) -> Self::S;

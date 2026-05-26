@@ -15,6 +15,12 @@ impl<N: Analysis> EGraph<N> {
 
     pub fn add(&mut self, n: &N::L) -> (N::G, Id) {
         let (g, n2) = N::canon(n, &self.uf);
+        let n2 = match n2 {
+            Either::L(n2) => n2,
+            Either::R(ii) => {
+                return (g, ii)
+            },
+        };
         if let Some((g2, x)) = self.hashcons.get(&n2) {
             // n == g*n2
             // n2 == g2*x
@@ -36,10 +42,17 @@ impl<N: Analysis> EGraph<N> {
     fn rebuild(&mut self) {
         loop {
             let mut dirty = false;
-            for (n, (g, x)) in std::mem::take(&mut self.hashcons) {
+            'hcloop: for (n, (g, x)) in std::mem::take(&mut self.hashcons) {
                 let (g, x) = self.find((g, x));
                 // n == g*x
                 let (g2, n2) = N::canon(&n, &self.uf);
+                let n2 = match n2 {
+                    Either::L(n2) => n2,
+                    Either::R(ii) => {
+                        self.union((g2, ii), (g, x));
+                        continue 'hcloop;
+                    },
+                };
                 // n == g2*n2
                 // -> g*x = g2*n2
                 // -> n2 = g2⁻¹*g*x

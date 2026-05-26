@@ -108,12 +108,12 @@ impl Analysis for LinearAnalysis {
     type S = ConstProp;
     type L = LinearLang;
 
-    fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Self::L) {
+    fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Either<Self::L, Id>) {
         match n {
-            LinearLang::Add([x, y]) => (Linear::identity(), LinearLang::Add([uf.find(*x), uf.find(*y)])), // TODO more canon!
-            LinearLang::Mul([x, y]) => (Linear::identity(), LinearLang::Mul([uf.find(*x), uf.find(*y)])), // TODO more canon!
-            LinearLang::Const(c) => (Linear { factor: f(1.0), offset: *c }, LinearLang::Const(f(0.0))),
-            LinearLang::Symbol(s) => (Linear::identity(), LinearLang::Symbol(*s)),
+            LinearLang::Add([x, y]) => (Linear::identity(), Either::L(LinearLang::Add([uf.find(*x), uf.find(*y)]))), // TODO more canon!
+            LinearLang::Mul([x, y]) => (Linear::identity(), Either::L(LinearLang::Mul([uf.find(*x), uf.find(*y)]))), // TODO more canon!
+            LinearLang::Const(c) => (Linear { factor: f(1.0), offset: *c }, Either::L(LinearLang::Const(f(0.0)))),
+            LinearLang::Symbol(s) => (Linear::identity(), Either::L(LinearLang::Symbol(*s))),
         }
     }
 
