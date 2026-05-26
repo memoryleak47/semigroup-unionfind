@@ -65,7 +65,10 @@ type OffsetId = (Offset, Id);
 enum OffsetLang {
     Add([OffsetId; 2]),
     Const(i64),
+
+    // Symbol + App are able to express anything.
     Symbol(Symbol),
+    App([OffsetId; 2]),
 }
 
 struct OffsetAnalysis;
@@ -91,6 +94,7 @@ impl Analysis for OffsetAnalysis {
                     (None, None) => (Offset(o), Either::L(OffsetLang::Add([(Offset(0), x), (Offset(0), y)]))),
                 }
             },
+            OffsetLang::App([x, y]) => (Offset::identity(), Either::L(OffsetLang::App([uf.find(*x), uf.find(*y)]))),
             OffsetLang::Const(c) => (Offset(*c), Either::L(OffsetLang::Const(0))),
             OffsetLang::Symbol(s) => (Offset::identity(), Either::L(OffsetLang::Symbol(*s))),
         }
@@ -103,6 +107,7 @@ impl Analysis for OffsetAnalysis {
                 let Some(y) = uf.get_semilattice(y).0 else { return ConstProp(None) };
                 ConstProp(Some(x+y))
             },
+            OffsetLang::App(_) => ConstProp(None),
             OffsetLang::Const(c) => ConstProp(Some(*c)),
             OffsetLang::Symbol(_) => ConstProp(None),
         }
