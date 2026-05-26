@@ -77,6 +77,10 @@ impl<S: Semilattice> Unionfind<S> {
         }
     }
 
+    pub fn get_id_semilattice(&self, x: Id) -> S {
+        self.get_semilattice(&(S::G::identity(), x))
+    }
+
     pub fn get_semilattice(&self, gx: &(S::G, Id)) -> S {
         let (g, x) = gx;
         let (g, x) = self.find((g.clone(), *x));
