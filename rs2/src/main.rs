@@ -14,6 +14,7 @@ pub use egraph::*;
 
 // Examples:
 mod slotted;
+mod offset;
 mod linear;
 mod proofs;
 
