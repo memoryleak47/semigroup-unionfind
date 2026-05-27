@@ -13,9 +13,6 @@ mod egraph;
 pub use egraph::*;
 
 // Examples:
-mod slotted;
-mod offset;
-mod linear;
-mod proofs;
+mod cases;
 
 fn main() {}
