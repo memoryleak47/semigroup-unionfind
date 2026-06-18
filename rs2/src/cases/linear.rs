@@ -119,8 +119,16 @@ impl Analysis for LinearAnalysis {
 
     fn mk(n: &Self::L, id: Id, uf: &Unionfind<Self::S>) -> Self::S {
         match n {
-            LinearLang::Add([x, y]) => todo!(),
-            LinearLang::Mul([x, y]) => todo!(),
+            LinearLang::Add([x, y]) => {
+                let Some(x) = uf.get_semilattice(x).0 else { return ConstProp(None) };
+                let Some(y) = uf.get_semilattice(y).0 else { return ConstProp(None) };
+                ConstProp(Some(x+y))
+            },
+            LinearLang::Mul([x, y]) => {
+                let Some(x) = uf.get_semilattice(x).0 else { return ConstProp(None) };
+                let Some(y) = uf.get_semilattice(y).0 else { return ConstProp(None) };
+                ConstProp(Some(x*y))
+            },
             LinearLang::Const(c) => ConstProp(Some(*c)), // TODO merge classes that have const-prop'd to 1*c so that they all get merged.
             LinearLang::Symbol(_) => ConstProp(None),
         }
@@ -136,4 +144,42 @@ fn lintest() {
 
     assert!(Linear::compose(&l, &l.inverse()) == Linear::identity());
     assert!(Linear::compose(&l.inverse(), &l) == Linear::identity());
+}
+
+#[test]
+fn big_linear_test() {
+    let s = |i| LinearLang::Symbol(Symbol::new(format!("x{i}")));
+    let mut eg: EGraph<LinearAnalysis> = EGraph::new();
+
+    let seven = eg.add(&LinearLang::Const(f(7.)));
+    let four = eg.add(&LinearLang::Const(f(4.)));
+    let five = eg.add(&LinearLang::Const(f(5.)));
+
+    for i in 0..1000 {
+        let si = eg.add(&s(i));
+        let sip = eg.add(&s(i+1));
+
+        let si7 = eg.add(&LinearLang::Add([si, seven]));
+        let sip4 = eg.add(&LinearLang::Add([sip, four]));
+        eg.union(si7, sip4);
+        // s[i] + 7 = s[i+1] + 4
+        // s[i+1] = s[i] + 3
+    }
+    // let s[0] be x, and s[999] be y, then
+    // y = 3*999 + x
+    // y = 2997 + x
+
+    let s0 = eg.add(&s(0));
+    let s0_5 = eg.add(&LinearLang::Mul([five, s0]));
+    let s999 = eg.add(&s(999));
+    eg.union(s0_5, s999);
+
+    // 5x = y
+    // 5x = 2997 + x
+    // 4x = 2997
+    // x = 2997/4
+    // x = 749.25
+
+    let result = eg.get_semilattice(&s999).0.unwrap();
+    assert!((f(749.25) - result).abs() < 0.001);
 }

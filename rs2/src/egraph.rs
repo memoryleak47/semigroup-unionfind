@@ -109,4 +109,8 @@ impl<N: Analysis> EGraph<N> {
             println!("hc: {n:?} -> {i:?}");
         }
     }
+
+    pub fn get_semilattice(&self, x: &(N::G, Id)) -> N::S {
+        self.uf.get_semilattice(x)
+    }
 }
