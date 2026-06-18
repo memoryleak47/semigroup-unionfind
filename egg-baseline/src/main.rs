@@ -47,6 +47,17 @@ impl Analysis<LinearLang> for LinearAnalysis {
             (Some(l), Some(r)) => { assert_eq!(l, r); DidMerge(false, false) },
         }
     }
+
+    fn modify(egraph: &mut EGraph<LinearLang, LinearAnalysis>, id: Id) {
+        if let Some(c) = egraph[id].data.0 {
+            let added = egraph.add(LinearLang::Const(c));
+            egraph.union(id, added);
+
+            // I think we lose to much info by pruning in this example.
+            // egraph[id].nodes.retain(|n| n.is_leaf());
+        }
+
+    }
 }
 
 fn is_close(x: F64, y: F64) -> bool { (x - y).abs() <= 1e-10 }
