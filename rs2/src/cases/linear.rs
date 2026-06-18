@@ -103,6 +103,18 @@ enum LinearLang {
 
 struct LinearAnalysis;
 
+fn add_offset(l: Linear, o: F64) -> Linear {
+    let offset = l.offset + o;
+    let factor = l.factor;
+    Linear { offset, factor }
+}
+
+fn add_factor(l: Linear, f: F64) -> Linear {
+    let offset = l.offset * f;
+    let factor = l.factor * f;
+    Linear { factor, offset }
+}
+
 impl Analysis for LinearAnalysis {
     type G = Linear;
     type S = ConstProp;
@@ -110,8 +122,38 @@ impl Analysis for LinearAnalysis {
 
     fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Either<Self::L, Id>) {
         match n {
-            LinearLang::Add([x, y]) => (Linear::identity(), Either::L(LinearLang::Add([uf.find(*x), uf.find(*y)]))), // TODO more canon!
-            LinearLang::Mul([x, y]) => (Linear::identity(), Either::L(LinearLang::Mul([uf.find(*x), uf.find(*y)]))), // TODO more canon!
+            LinearLang::Add([x, y]) => {
+                match (uf.get_semilattice(x).0, uf.get_semilattice(y).0) {
+                    (None, None) => (Linear::identity(), Either::L(LinearLang::Add([uf.find(*x), uf.find(*y)]))), // TODO extract common offsets.
+                    (Some(x), None) => {
+                        let (y_g, y) = y;
+                        let l = add_offset(*y_g, x);
+                        (l, Either::R(*y))
+                    },
+                    (None, Some(y)) => {
+                        let (x_g, x) = x;
+                        let l = add_offset(*x_g, y);
+                        (l, Either::R(*x))
+                    },
+                    (Some(x), Some(y)) => (Linear { factor: f(1.0), offset: x+y }, Either::L(LinearLang::Const(f(0.0)))),
+                }
+            },
+            LinearLang::Mul([x, y]) => {
+                match (uf.get_semilattice(x).0, uf.get_semilattice(y).0) {
+                    (None, None) => (Linear::identity(), Either::L(LinearLang::Mul([uf.find(*x), uf.find(*y)]))),
+                    (Some(x), None) => {
+                        let (y_g, y) = y;
+                        let l = add_factor(*y_g, x);
+                        (l, Either::R(*y))
+                    },
+                    (None, Some(y)) => {
+                        let (x_g, x) = x;
+                        let l = add_factor(*x_g, y);
+                        (l, Either::R(*x))
+                    },
+                    (Some(x), Some(y)) => (Linear { factor: f(1.0), offset: x*y }, Either::L(LinearLang::Const(f(0.0)))),
+                }
+            },
             LinearLang::Const(c) => (Linear { factor: f(1.0), offset: *c }, Either::L(LinearLang::Const(f(0.0)))),
             LinearLang::Symbol(s) => (Linear::identity(), Either::L(LinearLang::Symbol(*s))),
         }
@@ -147,6 +189,38 @@ fn lintest() {
 }
 
 #[test]
+fn small_linear_test() {
+    let s = |i| LinearLang::Symbol(Symbol::new(format!("x{i}")));
+    let mut eg: EGraph<LinearAnalysis> = EGraph::new();
+
+    let three = eg.add(&LinearLang::Const(f(3.)));
+    let five = eg.add(&LinearLang::Const(f(5.)));
+
+    let s0 = eg.add(&s(0));
+    let s1 = eg.add(&s(1));
+
+    let s0_3 = eg.add(&LinearLang::Add([s0, three]));
+    eg.union(s0_3, s1);
+    // s1 = s0 + 3
+
+    dbg!(eg.get_g_between(s0, s1));
+
+    let s0_5 = eg.add(&LinearLang::Mul([five, s0]));
+    dbg!(eg.get_g_between(s0, s0_5));
+
+    eg.union(s0_5, s1);
+    // 5*s0 = s1
+
+    // 5*(s1-3) = s1
+    // 5*s1 - 15 = s1
+    // 4*s1 = 15
+    // s1 = 15/4
+
+    let result = eg.get_semilattice(&s1).0.unwrap();
+    assert!(is_close(result, f(15./4.)));
+}
+
+#[test]
 fn big_linear_test() {
     let s = |i| LinearLang::Symbol(Symbol::new(format!("x{i}")));
     let mut eg: EGraph<LinearAnalysis> = EGraph::new();
@@ -165,21 +239,23 @@ fn big_linear_test() {
         // s[i] + 7 = s[i+1] + 4
         // s[i+1] = s[i] + 3
     }
-    // let s[0] be x, and s[999] be y, then
-    // y = 3*999 + x
-    // y = 2997 + x
+
+    // let s[0] be x, and s[1000] be y, then
+    // y = 3*1000 + x
+    // y = 3000 + x
 
     let s0 = eg.add(&s(0));
     let s0_5 = eg.add(&LinearLang::Mul([five, s0]));
-    let s999 = eg.add(&s(999));
-    eg.union(s0_5, s999);
+    let s1000 = eg.add(&s(1000));
+    eg.union(s0_5, s1000);
 
     // 5x = y
-    // 5x = 2997 + x
-    // 4x = 2997
-    // x = 2997/4
-    // x = 749.25
+    // 5x = 3000 + x
+    // 4x = 3000
+    // x = 3000/4
+    // x = 750
+    // -> y = 3750
 
-    let result = eg.get_semilattice(&s999).0.unwrap();
-    assert!((f(749.25) - result).abs() < 0.001);
+    let result = eg.get_semilattice(&s1000).0.unwrap();
+    assert!(is_close(result, f(3750.)));
 }
