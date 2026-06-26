@@ -1,8 +1,8 @@
 use crate::*;
 
 pub struct EGraph<N: Analysis> {
-    hashcons: HashMap<N::L, (N::G, Id)>,
-    uf: Unionfind<N::S>,
+    pub hashcons: HashMap<N::L, (N::G, Id)>,
+    pub uf: Unionfind<N::S>,
 }
 
 impl<N: Analysis> EGraph<N> {
@@ -17,9 +17,7 @@ impl<N: Analysis> EGraph<N> {
         let (g, n2) = N::canon(n, &self.uf);
         let n2 = match n2 {
             Either::L(n2) => n2,
-            Either::R(ii) => {
-                return (g, ii)
-            },
+            Either::R(ii) => return (g, ii),
         };
         if let Some((g2, x)) = self.hashcons.get(&n2) {
             // n == g*n2
@@ -33,6 +31,20 @@ impl<N: Analysis> EGraph<N> {
             (g, x)
         }
     }
+
+    pub fn lookup(&self, n: &N::L) -> Option<(N::G, Id)> {
+        let (g, n2) = N::canon(n, &self.uf);
+        let n2 = match n2 {
+            Either::L(n2) => n2,
+            Either::R(ii) => return Some((g, ii)),
+        };
+        let (g2, x) = self.hashcons.get(&n2)?;
+        // n == g*n2
+        // n2 == g2*x
+        // -> n == g*g2*x
+        Some((N::G::compose(&g, &g2), *x))
+    }
+
 
     pub fn union(&mut self, x: (N::G, Id), y: (N::G, Id)) {
         self.uf.union(x, y);

@@ -1,7 +1,7 @@
 use crate::*;
 
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug, PartialOrd, Ord)]
-pub struct Id(usize);
+pub struct Id(pub usize);
 
 struct UFClass<S: Semilattice> {
     s: S,
