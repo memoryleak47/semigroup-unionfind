@@ -36,4 +36,6 @@ pub trait Analysis {
 
     // should only be called on e-nodes after they have been given `canon`.
     fn mk(n: &Self::L, id: Id, uf: &Unionfind<Self::S>) -> Self::S;
+
+    fn reify(s: &Self::S) -> Option<Self::L> { None }
 }

@@ -54,6 +54,15 @@ impl<N: Analysis> EGraph<N> {
     fn rebuild(&mut self) {
         loop {
             let mut dirty = false;
+
+            for x in self.classes() {
+                let s = self.uf.get_leader_semilattice(x);
+                if let Some(n) = N::reify(s) {
+                    let x2 = self.add(&n);
+                    dirty |= self.uf.union(x2, (N::G::identity(), x));
+                }
+            }
+
             'hcloop: for (n, (g, x)) in std::mem::take(&mut self.hashcons) {
                 let (g, x) = self.find((g, x));
                 // n == g*x
@@ -61,7 +70,7 @@ impl<N: Analysis> EGraph<N> {
                 let n2 = match n2 {
                     Either::L(n2) => n2,
                     Either::R(ii) => {
-                        self.union((g2, ii), (g, x));
+                        dirty |= self.uf.union((g2, ii), (g, x));
                         continue 'hcloop;
                     },
                 };
