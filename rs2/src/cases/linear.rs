@@ -175,6 +175,10 @@ impl Analysis for LinearAnalysis {
             LinearLang::Symbol(_) => ConstProp(None),
         }
     }
+
+    fn reify(s: &ConstProp) -> Option<LinearLang> {
+        s.0.map(LinearLang::Const)
+    }
 }
 
 #[test]
