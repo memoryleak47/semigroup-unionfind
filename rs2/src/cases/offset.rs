@@ -383,5 +383,4 @@ fn test_offset_ematching() {
             eprintln!("{}", subst_to_string(&x));
         }
     }
-    panic!();
 }
