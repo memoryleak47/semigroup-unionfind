@@ -175,6 +175,7 @@ fn eqsat_test(t1: &Term, t2: &Term, rules: &Rules, n: usize) {
     let x2 = add_term(t2, eg);
 
     eqsat(eg, rules, n);
+    dbg!(eg.hashcons.len());
     let () = eg.get_g_between(x1.clone(), x2.clone()).unwrap();
 }
 
