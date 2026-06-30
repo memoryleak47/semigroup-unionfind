@@ -20,7 +20,7 @@ pub fn proofs_main() {
     let t2 = zero();
     let runner = Runner::<_, _, ()>::new(());
     let runner = if PROOFS { runner.with_explanations_enabled() } else { runner.with_explanations_disabled() };
-    let runner = runner.with_expr(&t1).with_expr(&t2).with_iter_limit(4).run(&rules());
+    let runner = runner.with_expr(&t1).with_expr(&t2).with_iter_limit(5).run(&rules());
     dbg!(runner.egraph.total_size());
     dbg!(runner.iterations.len());
     dbg!(&runner.stop_reason);

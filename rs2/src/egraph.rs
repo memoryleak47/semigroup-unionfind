@@ -51,7 +51,7 @@ impl<N: Analysis> EGraph<N> {
         self.rebuild();
     }
 
-    fn rebuild(&mut self) {
+    pub fn rebuild(&mut self) {
         loop {
             let mut dirty = false;
 

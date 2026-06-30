@@ -124,8 +124,9 @@ fn eqsat(eg: &mut EGraph<()>, rules: &Rules, n: usize) {
         for (rule_name, lhs, rhs, subst) in future_unions {
             let lhs = instantiate(lhs, &subst, eg);
             let rhs = instantiate(rhs, &subst, eg);
-            eg.union(((), lhs), ((), rhs));
+            eg.uf.union(((), lhs), ((), rhs));
         }
+        eg.rebuild();
     }
 }
 
@@ -224,5 +225,5 @@ fn test_trivial_arith() {
 
     let t2 = zero();
     let rules = &[rule1, rule2, rule3, rule4, rule5];
-    eqsat_test(t1, t2, rules, 4);
+    eqsat_test(t1, t2, rules, 5);
 }

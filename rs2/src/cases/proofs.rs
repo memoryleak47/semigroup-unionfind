@@ -200,8 +200,9 @@ fn eqsat(eg: &mut EGraph<ProofAnalysis>, rules: &Rules, n: usize) {
             let rhs = instantiate(rhs, &subst, eg);
 
             let lhs = justify(lhs.clone(), rule_name);
-            eg.union(lhs, rhs);
+            eg.uf.union(lhs, rhs);
         }
+        eg.rebuild();
     }
 }
 
@@ -575,5 +576,5 @@ fn test_proofs_arith() {
 
     let t2 = zero();
     let rules = &[rule1, rule2, rule3, rule4, rule5];
-    eqsat_test(t1, t2, rules, 4);
+    eqsat_test(t1, t2, rules, 5);
 }
