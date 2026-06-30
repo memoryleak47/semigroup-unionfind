@@ -4,4 +4,4 @@ mod slotted;
 mod offset;
 mod linear;
 mod proofs;
-
+mod trivial;
