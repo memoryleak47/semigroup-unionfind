@@ -6,7 +6,7 @@ fn zero() -> RecExpr<TrivialLang> {
     "zero".parse().unwrap()
 }
 
-const PROOFS: bool = true;
+const PROOFS: bool = false;
 pub fn proofs_main() {
     let mut t1 = String::from("zero");
     for i in 0..3 {

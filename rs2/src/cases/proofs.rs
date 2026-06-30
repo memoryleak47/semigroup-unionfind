@@ -187,6 +187,7 @@ fn instantiate(pattern: &Pattern, subst: &Subst, eg: &mut EGraph<ProofAnalysis>)
 
 fn eqsat(eg: &mut EGraph<ProofAnalysis>, rules: &Rules, n: usize) {
     for _ in 0..n {
+        // 1. e-match
         let mut future_unions = Vec::new();
         for (rule_name, lhs, rhs) in rules.iter() {
             for x in eg.classes() {
@@ -195,13 +196,23 @@ fn eqsat(eg: &mut EGraph<ProofAnalysis>, rules: &Rules, n: usize) {
                 }
             }
         }
+
+        // 2. instantiate
+        let mut real_future_unions = Vec::new();
         for (rule_name, lhs, rhs, subst) in future_unions {
             let lhs = instantiate(lhs, &subst, eg);
             let rhs = instantiate(rhs, &subst, eg);
 
             let lhs = justify(lhs.clone(), rule_name);
+            real_future_unions.push((lhs, rhs));
+        }
+
+        // 3. union
+        for (lhs, rhs) in real_future_unions {
             eg.uf.union(lhs, rhs);
         }
+
+        // 4. rebuild
         eg.rebuild();
     }
 }
@@ -348,6 +359,8 @@ fn eqsat_test(t1: &Term, t2: &Term, rules: &Rules, n: usize) {
     if DEBUGGING {
         dbg!(&p);
     }
+
+    dbg!(eg.hashcons.len());
 
     // TODO: this can fail as explained above.
     // assert_eq!(apply_proof(t1, &p, rules), t2.clone());
@@ -576,5 +589,5 @@ fn test_proofs_arith() {
 
     let t2 = zero();
     let rules = &[rule1, rule2, rule3, rule4, rule5];
-    eqsat_test(t1, t2, rules, 5);
+    eqsat_test(t1, t2, rules, 6);
 }
