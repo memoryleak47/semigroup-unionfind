@@ -223,5 +223,5 @@ fn test_trivial_arith() {
 
     let t2 = zero();
     let rules = &[rule1, rule2, rule3, rule4, rule5];
-    eqsat_test(t1, t2, rules, 6);
+    eqsat_test(t1, t2, rules, 4);
 }
