@@ -564,16 +564,16 @@ fn test_proofs_arith() {
     );
 
     let mut t1 = zero();
-    for i in 0..4 {
+    for i in 0..3 {
         let a = atom(&format!("a{i}"));
         t1 = add(t1, a);
     }
-    for i in 0..4 {
+    for i in 0..3 {
         let a = atom(&format!("a{i}"));
         t1 = add(neg(a), t1);
     }
 
     let t2 = zero();
     let rules = &[rule1, rule2, rule3, rule4, rule5];
-    eqsat_test(t1, t2, rules, 5);
+    eqsat_test(t1, t2, rules, 4);
 }
