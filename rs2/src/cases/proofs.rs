@@ -7,7 +7,7 @@ enum ProofObj {
     Refl,
     Sym(Proof),
     Trans(Proof, Proof), // works in compose order. So Trans(a, b) first applies b, then a.
-    Congr(Symbol, Box<[Proof]>),
+    Congr(Box<[Proof]>),
     Rule(Symbol),
 }
 
@@ -56,12 +56,12 @@ fn mk_sym(x: Proof) -> Proof {
     }
 }
 
-fn mk_congr(f: Symbol, argproofs: Box<[Proof]>) -> Proof {
+fn mk_congr(argproofs: Box<[Proof]>) -> Proof {
     if argproofs.iter().all(is_refl) {
         mk_refl()
     } else {
         Rc::new(
-            ProofObj::Congr(f, argproofs)
+            ProofObj::Congr(argproofs)
         )
     }
 }
@@ -99,7 +99,7 @@ impl Analysis for ProofAnalysis {
             proofs.push(p.clone());
             args.push((mk_refl(), y));
         }
-        let p = mk_congr(n.f, proofs.into());
+        let p = mk_congr(proofs.into());
         let n = ProofLang {
             f: n.f,
             args: args.into(),
@@ -227,9 +227,8 @@ fn apply_proof_impl(term: &Term, p: &Proof, rules: &Rules, rev: bool) -> Term {
                 term
             }
         },
-        ProofObj::Congr(f2, subs) => {
+        ProofObj::Congr(subs) => {
             let Term::Node(f, args) = term else { panic!() };
-            assert_eq!(f, f2);
             assert_eq!(subs.len(), args.len());
             let mut outs = Vec::new();
             for (t, p) in args.iter().zip(subs) {
