@@ -126,7 +126,7 @@ enum Pattern {
 // terms share the same layout as patterns.
 type Term = Pattern;
 
-type PVar = String;
+type PVar = Symbol;
 type Subst = HashMap<PVar, Id>;
 type L = ProofLang;
 type G = Proof;
@@ -300,7 +300,7 @@ fn atom(s: &str) -> &'static Pattern {
 }
 
 fn pvar(s: &str) -> &'static Pattern {
-    Box::leak(Box::new(Pattern::PVar(s.to_string())))
+    Box::leak(Box::new(Pattern::PVar(Symbol::new(s))))
 }
 
 fn f(p1: &'static Pattern, p2: &'static Pattern) -> &'static Pattern {
