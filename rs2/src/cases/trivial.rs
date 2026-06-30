@@ -113,6 +113,7 @@ fn instantiate(pattern: &Pattern, subst: &Subst, eg: &mut EGraph<()>) -> Id {
 
 fn eqsat(eg: &mut EGraph<()>, rules: &Rules, n: usize) {
     for _ in 0..n {
+        // 1. e-match
         let mut future_unions = Vec::new();
         for (rule_name, lhs, rhs) in rules.iter() {
             for x in eg.classes() {
@@ -121,11 +122,21 @@ fn eqsat(eg: &mut EGraph<()>, rules: &Rules, n: usize) {
                 }
             }
         }
+
+        // 2. add instantiations
+        let mut real_future_unions = Vec::new();
         for (rule_name, lhs, rhs, subst) in future_unions {
             let lhs = instantiate(lhs, &subst, eg);
             let rhs = instantiate(rhs, &subst, eg);
+            real_future_unions.push((lhs, rhs));
+        }
+
+        // 3. add unions
+        for (lhs, rhs) in real_future_unions {
             eg.uf.union(((), lhs), ((), rhs));
         }
+
+        // 4. rebuild
         eg.rebuild();
     }
 }
