@@ -1,6 +1,7 @@
 use crate::*;
 use std::rc::Rc;
 use std::collections::HashMap;
+use crate::cases::trivial::Subst;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 enum ProofObj {
@@ -127,7 +128,6 @@ enum Pattern {
 type Term = Pattern;
 
 type PVar = Symbol;
-type Subst = HashMap<PVar, Id>;
 type L = ProofLang;
 type G = Proof;
 
@@ -144,7 +144,7 @@ fn ematch_impl(x: Id, pat: &Pattern, eg: &EGraph<ProofAnalysis>, subst: &Subst) 
         Pattern::PVar(v) => {
             let mut subst = subst.clone();
             if let Some(a) = subst.get(v) {
-                if *a != x { return Vec::new() }
+                if a != x { return Vec::new() }
             } else {
                 subst.insert(v.clone(), x);
             }
@@ -172,7 +172,7 @@ fn ematch_impl(x: Id, pat: &Pattern, eg: &EGraph<ProofAnalysis>, subst: &Subst) 
 
 fn instantiate(pattern: &Pattern, subst: &Subst, eg: &mut EGraph<ProofAnalysis>) -> (Proof, Id) {
     match pattern {
-        Pattern::PVar(v) => (G::identity(), subst[v]),
+        Pattern::PVar(v) => (G::identity(), subst.get(v).unwrap()),
         Pattern::Node(f, pargs) => {
             let f = *f;
             let mut args = Vec::new();
