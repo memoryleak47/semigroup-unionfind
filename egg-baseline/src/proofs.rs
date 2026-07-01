@@ -6,7 +6,7 @@ fn zero() -> RecExpr<TrivialLang> {
     "zero".parse().unwrap()
 }
 
-const PROOFS: bool = false;
+const PROOFS: bool = true;
 pub fn proofs_main() {
     let mut t1 = String::from("zero");
     for i in 0..3 {
@@ -20,7 +20,8 @@ pub fn proofs_main() {
     let t2 = zero();
     let runner = Runner::<_, _, ()>::new(());
     let runner = if PROOFS { runner.with_explanations_enabled() } else { runner.with_explanations_disabled() };
-    let runner = runner.with_expr(&t1).with_expr(&t2).with_node_limit(100000000).with_iter_limit(6).with_scheduler(SimpleScheduler).run(&rules());
+    let mut runner = runner.with_expr(&t1).with_expr(&t2).with_node_limit(100000000).with_iter_limit(6).with_scheduler(SimpleScheduler).run(&rules());
+    dbg!(runner.egraph.get_explanation_num_nodes());
     dbg!(runner.egraph.total_size());
     dbg!(runner.egraph.total_number_of_nodes());
     dbg!(runner.iterations.len());
