@@ -1,6 +1,7 @@
 use crate::*;
 use std::rc::Rc;
 use std::collections::HashMap;
+use smallvec::*;
 
 impl Group for () {
     fn identity() {}
@@ -56,7 +57,6 @@ enum Pattern {
 type Term = Pattern;
 
 type PVar = Symbol;
-type Subst = HashMap<PVar, Id>;
 type L = TrivialLang;
 
 // semantics:
@@ -72,7 +72,7 @@ fn ematch_impl(x: Id, pat: &Pattern, eg: &EGraph<()>, subst: &Subst) -> Vec<Subs
         Pattern::PVar(v) => {
             let mut subst = subst.clone();
             if let Some(a) = subst.get(v) {
-                if *a != x { return Vec::new() }
+                if a != x { return Vec::new() }
             } else {
                 subst.insert(v.clone(), x);
             }
@@ -98,7 +98,7 @@ fn ematch_impl(x: Id, pat: &Pattern, eg: &EGraph<()>, subst: &Subst) -> Vec<Subs
 
 fn instantiate(pattern: &Pattern, subst: &Subst, eg: &mut EGraph<()>) -> Id {
     match pattern {
-        Pattern::PVar(v) => subst[v],
+        Pattern::PVar(v) => subst.get(v).unwrap(),
         Pattern::Node(f, pargs) => {
             let f = *f;
             let mut args = Vec::new();
@@ -237,4 +237,25 @@ fn test_trivial_arith() {
     let t2 = zero();
     let rules = &[rule1, rule2, rule3, rule4, rule5];
     eqsat_test(t1, t2, rules, 6);
+}
+
+#[derive(Clone)]
+pub struct Subst(SmallVec<[(PVar, Id); 3]>);
+
+impl Subst {
+    pub fn new() -> Self {
+        Subst(SmallVec::new())
+    }
+
+    pub fn get(&self, x: &PVar) -> Option<Id> {
+        for (a, b) in &self.0 {
+            if x == a { return Some(*b) }
+        }
+        None
+    }
+
+    pub fn insert(&mut self, x: PVar, y: Id) {
+        assert_eq!(self.get(&x), None);
+        self.0.push((x, y));
+    }
 }
