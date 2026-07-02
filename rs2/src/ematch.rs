@@ -32,8 +32,17 @@ pub fn ematch_impl<N: Analysis>(id: Id, pat: &Pattern<N::L>, eg: &EGraph<N>, sub
     }
 }
 
+fn clear_node<N: Analysis>(n: &N::L) -> N::L {
+    let mut n = n.clone();
+    for c in N::children_mut(&mut n) {
+        *c = (N::G::identity(), Id(0));
+    }
+    n
+}
+
 pub fn ematch_node<N: Analysis>(node: &N::L, patnode: &N::L, pat_args: &[Pattern<N::L>], eg: &EGraph<N>, subst: Subst) -> Vec<Subst> {
-    if node != patnode { return Vec::new() }
+    if clear_node::<N>(node) != clear_node::<N>(patnode) { return Vec::new() }
+
     let mut node = node.clone();
 
     let mut out = vec![subst];
