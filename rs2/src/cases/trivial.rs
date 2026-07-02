@@ -114,26 +114,29 @@ fn instantiate(pattern: &Pattern, subst: &Subst, eg: &mut EGraph<()>) -> Id {
 fn eqsat(eg: &mut EGraph<()>, rules: &Rules, n: usize) {
     for _ in 0..n {
         // 1. e-match
-        let mut future_unions = Vec::new();
+        let mut matches = Vec::new();
         for (rule_id, (_, lhs, _)) in rules.iter().enumerate() {
+            let mut inner = Vec::new();
             for x in eg.classes() {
-                for subst in ematch(x, lhs, eg) {
-                    future_unions.push((rule_id, subst));
-                }
+                inner.extend(ematch(x, lhs, eg));
             }
+            matches.push(inner);
         }
 
         // 2. add instantiations
-        let mut real_future_unions = Vec::new();
-        for (rule_id, subst) in future_unions {
-            let (_, lhs, rhs) = &rules[rule_id];
-            let lhs = instantiate(lhs, &subst, eg);
-            let rhs = instantiate(rhs, &subst, eg);
-            real_future_unions.push((lhs, rhs));
+        let mut future_unions = Vec::new();
+        for (inner, (_, lhs, rhs)) in matches.into_iter().zip(rules) {
+            for subst in inner {
+                let lhs = instantiate(lhs, &subst, eg);
+                let rhs = instantiate(rhs, &subst, eg);
+                future_unions.push((lhs, rhs));
+                // NOTE: directly calling eg.uf.union here is apparently very bad for memory consumption.
+                // No clue why.
+            }
         }
 
-        // 3. add unions
-        for (lhs, rhs) in real_future_unions {
+        // 3. union them
+        for (lhs, rhs) in future_unions {
             eg.uf.union(((), lhs), ((), rhs));
         }
 
