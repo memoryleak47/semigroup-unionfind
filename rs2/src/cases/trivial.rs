@@ -115,17 +115,18 @@ fn eqsat(eg: &mut EGraph<()>, rules: &Rules, n: usize) {
     for _ in 0..n {
         // 1. e-match
         let mut future_unions = Vec::new();
-        for (rule_name, lhs, rhs) in rules.iter() {
+        for (rule_id, (_, lhs, _)) in rules.iter().enumerate() {
             for x in eg.classes() {
                 for subst in ematch(x, lhs, eg) {
-                    future_unions.push((*rule_name, lhs, rhs, subst));
+                    future_unions.push((rule_id, subst));
                 }
             }
         }
 
         // 2. add instantiations
         let mut real_future_unions = Vec::new();
-        for (rule_name, lhs, rhs, subst) in future_unions {
+        for (rule_id, subst) in future_unions {
+            let (_, lhs, rhs) = &rules[rule_id];
             let lhs = instantiate(lhs, &subst, eg);
             let rhs = instantiate(rhs, &subst, eg);
             real_future_unions.push((lhs, rhs));
