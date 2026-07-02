@@ -13,11 +13,10 @@ pub fn eqsat<N: Analysis>(term: Term<N>, rules: &[Rule<N>], n: usize) {
         let mut matches = Vec::new();
         for (rule_id, (lhs, rhs)) in rules.iter().enumerate() {
             for i in eg.classes() {
-                matches.push((
-                    rule_id,
-                    i,
-                    ematch(i, lhs, &eg)
-                ));
+                let matches_ = ematch(i, lhs, &eg);
+                if matches_.len() > 0 {
+                    matches.push((rule_id, i, matches_));
+                }
             }
         }
 
