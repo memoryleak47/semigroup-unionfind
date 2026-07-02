@@ -38,4 +38,6 @@ pub trait Analysis {
     fn mk(n: &Self::L, id: Id, uf: &Unionfind<Self::S>) -> Self::S;
 
     fn reify(s: &Self::S) -> Option<Self::L> { None }
+
+    fn children_mut(l: &mut Self::L) -> Box<[&mut (Self::G, Id)]> { todo!("children_mut unsupported!") }
 }

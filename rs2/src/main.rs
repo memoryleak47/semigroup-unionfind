@@ -12,6 +12,8 @@ pub use uf::*;
 mod egraph;
 pub use egraph::*;
 
+mod ematch;
+
 // Examples:
 mod cases;
 
