@@ -13,6 +13,10 @@ mod egraph;
 pub use egraph::*;
 
 mod ematch;
+pub use ematch::*;
+
+mod eqsat;
+pub use eqsat::*;
 
 // Examples:
 mod cases;

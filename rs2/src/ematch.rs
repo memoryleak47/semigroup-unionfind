@@ -1,7 +1,7 @@
 use crate::*;
 
-type Subst<N: Analysis> = HashMap<PVar, (N::G, Id)>;
-type PVar = Symbol;
+pub type Subst<N: Analysis> = HashMap<PVar, (N::G, Id)>;
+pub type PVar = Symbol;
 
 pub enum Pattern<L> {
     PVar(PVar),
