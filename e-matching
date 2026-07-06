@@ -43,14 +43,14 @@ ematch(x: Id, pat, subst) -> Vec<(G, Subst)> {
     for g'*node in x {
         if node.op != pat.op { continue }
 
-        let f(g1*a1, ..., gn*an) = node;
+        let f(refl*a1, ..., refl*an) = node; # by canonization we know these are refl.
         let f(p1, ..., pn) = pat;
 
         matches = [(refl, subst)];
         for i in 1..n {
             for (g_s, subst) in std::mem::take(&mut matches) {
                 for (g_inner, subst_new) in ematch(ai, pi, subst) {
-                    real_g = proj(gi*g_inner, i, n) * g_s
+                    real_g = proj(g_inner, i, n) * g_s
                     matches.push((real_g, subst_new))
                 }
             }
