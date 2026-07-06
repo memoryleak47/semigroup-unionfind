@@ -29,14 +29,14 @@ instantiate(pat, subst) -> GId {
 #### e-matching for proofs:
 
 type Subst = PVar -> Id; # we don't want GIds here necessarily, even though it wouldn't be criminal to have them, as we consider any G a self-loop in this.
-ematch(g*x: GId, pat, subst) -> Vec<(G, Subst)> {
+ematch(x: Id, pat, subst) -> Vec<(G, Subst)> {
     if let ?v = pat {
         if let Some(x2) = subst[?v] {
             if x != x2 { return Vec::new() }
         } else {
             subst.insert(?v, x);
         }
-        return vec![(g, subst)]
+        return vec![(refl, subst)]
     }
 
     out = [];
@@ -46,21 +46,28 @@ ematch(g*x: GId, pat, subst) -> Vec<(G, Subst)> {
         let f(g1*a1, ..., gn*an) = node;
         let f(p1, ..., pn) = pat;
 
-        matches = [subst];
+        matches = [(refl, subst)];
         for i in 1..n {
-            for subst in std::mem::take(&mut matches) {
-                for (g_new, subst_new) in ematch(ai, pi, subst) {
-                    matches.push((subst_new));
+            for (g_s, subst) in std::mem::take(&mut matches) {
+                for (g_inner, subst_new) in ematch(ai, pi, subst) {
+                    real_g = proj(gi*g_inner, i, n) * g_s
+                    matches.push((real_g, subst_new))
                 }
             }
         }
-        out.extend(matches);
+        for (gg, subst) in matches {
+            out.push((g'*gg, subst));
+        }
     }
     out
 }
 
-
-
+# This could entirely replace cong also.
+proj(g, i: num, n: num) {
+    cong(refl, ..., g, ..., refl)
+    #               |         |
+    #          at index i    length n
+}
 
 #### e-matching for slotted:
 type Subst = PVar -> GId;
