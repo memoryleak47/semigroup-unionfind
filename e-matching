@@ -74,6 +74,55 @@ type Subst = PVar -> GId;
 # TODO don't we require "State" here? due to the partial_slotmap?
 
 #### e-matching for offset:
+type MVar = usize;
+type LinearPoly = ...; # linear polynomials over MVar.
+type Subst = PVar -> (LinearPoly, Id);
+
+ematch(g*x: GId, pat, subst) -> Vec<Subst> {
+    if let ?v = pat {
+        if let Some(g2*x2) = subst[?v] {
+            if !eq(g*x, g2*x2) { return Vec::new() }
+        } else {
+            subst.insert(?v, g*x);
+        }
+        return vec![subst]
+    }
+
+    out = [];
+    for g2*node in x.nodes ++ [Add(x, zero), Add(zero, x)] {
+        if node.op != pat.op { continue }
+
+        if let Add(l, r) = node {
+            replace g2*node with g2*[-(m1+m2)]*Add([+m1]*l, [+m2]*r) for fresh mvars m1, m2.
+        }
+
+        # we require g*x = g2*x
+        let Some(subst) = constrain(g, g2, subst) else { continue };
+
+        let f(g1*a1, ..., gn*an) = node;
+        let f(p1, ..., pn) = pat;
+
+        matches = [subst];
+        for i in 1..n {
+            for subst in std::mem::take(&mut matches) {
+                matches.extend(ematch(gi*ai, pi, subst));
+            }
+        }
+        out.extend(matches);
+    }
+    out
+}
+
+constrain(subst, x: LinearPoly, y: LinearPoly) -> Option<Subst> {
+    let z: LinearPoly = x-y;
+    if z == 0 { return Some(subst) }
+
+    let (v: MVar, vv: LinearPoly) = solve(z)?;
+    for (pvar, (g, id)) in subst.iter_mut() {
+        g.replace(v, vv);
+    }
+    Some(subst)
+}
 
 
 
