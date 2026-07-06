@@ -4,6 +4,7 @@
 
 type Subst = PVar -> Id;
 
+# `[(g, subst), ...] = ematch(x, pat)` means `g*x = pat[subst]`
 ematch(x: Id, pat) -> Vec<(G, Subst)> {
     out = [];
     for subst in skel_ematch(x, pat, []) {
@@ -14,6 +15,7 @@ ematch(x: Id, pat) -> Vec<(G, Subst)> {
     out
 }
 
+# `g*x = instantiate(pat, subst)` means `g*x = pat[subst]`
 instantiate(pat, subst) -> GId {
     match pat {
         ?p => subst[?p],
