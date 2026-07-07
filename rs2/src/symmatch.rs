@@ -4,9 +4,11 @@ pub trait Matcher<N: Analysis>: Sized {
     type SymG: Clone;
 
     // l*r*x, thus r is applied first.
-    fn compose(l: Self::SymG, r: Self::SymG) -> Self::SymG;
+    fn compose(l: &Self::SymG, r: &Self::SymG) -> Self::SymG;
+    fn inverse(x: &Self::SymG) -> Self::SymG;
 
     fn from_gvar(id: GVar) -> Self::SymG;
+    fn from_g(g: &N::G) -> Self::SymG;
 
     fn expand(node: &N::L) -> (/*up*/Self::SymG, /*children*/Box<[Self::SymG]>);
 
@@ -45,10 +47,24 @@ fn ematch<N: Analysis, M: Matcher<N>>(pat: &Pattern<N::L>, eg: &EGraph<N>) -> Ve
 
 fn ematch_impl<'eg, N: Analysis, M: Matcher<N>>(gid: (M::SymG, Id), pat: &Pattern<N::L>, eg: &'eg EGraph<N>, mut state: State<'eg, N, M>) -> Vec<State<'eg, N, M>> {
     let id_v = alloc_gvar(&mut state);
-    let gid = (M::compose(gid.0, M::from_gvar(id_v)), gid.1);
+    let gid = (M::compose(&gid.0, &M::from_gvar(id_v)), gid.1);
     state.gs_constraints.insert(id_v, eg.get_leader_semilattice(gid.1));
 
-    todo!()
+    match pat {
+        Pattern::PVar(v) => {
+            if let Some((g, i)) = state.subst.get(v) {
+                if *i != gid.1 { return Vec::new() }
+                let cons = M::compose(&M::inverse(&gid.0), &g);
+                state.g_constraints.push(cons);
+            } else {
+                state.subst.insert(*v, gid);
+            }
+            vec![state]
+        },
+        Pattern::Node(n, childpats) => {
+            todo!()
+        },
+    }
 }
 
 // boring stuff
