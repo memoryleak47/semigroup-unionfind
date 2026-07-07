@@ -11,6 +11,13 @@ pub enum Pattern<L> {
     Node(L, Box<[Pattern<L>]>),
 }
 
+pub fn is_term<N: Analysis>(pat: &Pattern<N::L>) -> bool {
+    match pat {
+        Pattern::PVar(_) => false,
+        Pattern::Node(_, subpats) => subpats.iter().all(is_term::<N>),
+    }
+}
+
 pub fn ematch<N: Analysis>(id: Id, pat: &Pattern<N::L>, eg: &EGraph<N>) -> Vec<Subst<N>> {
     // TODO this already excludes some of the e-nodes of the e-class due to G things being in the way.
     let gid = (N::G::identity(), id);

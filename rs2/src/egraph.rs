@@ -45,6 +45,18 @@ impl<N: Analysis> EGraph<N> {
         Some((N::G::compose(&g, &g2), *x))
     }
 
+    pub fn lookup_term(&self, t: &Term<N>) -> Option<(N::G, Id)> {
+        match t {
+            Pattern::PVar(_) => panic!("lookup_term called on pattern with pvar!"),
+            Pattern::Node(n, children) => {
+                let mut n = n.clone();
+                for (ptr, child) in N::children_mut(&mut n).into_iter().zip(children) {
+                    *ptr = self.lookup_term(child)?;
+                }
+                self.lookup(&n)
+            },
+        }
+    }
 
     pub fn union(&mut self, x: (N::G, Id), y: (N::G, Id)) {
         self.uf.union(x, y);

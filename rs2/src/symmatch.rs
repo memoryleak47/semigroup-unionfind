@@ -50,6 +50,17 @@ fn ematch_impl<'eg, N: Analysis, M: Matcher<N>>(gid: (M::SymG, Id), pat: &Patter
     let gid = (M::compose(&gid.0, &M::from_gvar(id_v)), gid.1);
     state.gs_constraints.insert(id_v, eg.get_leader_semilattice(gid.1));
 
+    // This handles subpatterns without pvars, i.e. terms.
+    // Just an optimization, but required for constants/slot-vars,
+    // as we need to call "canon" on consts in the pattern anyways.
+    if is_term::<N>(pat) {
+        let Some((gg, ii)) = eg.lookup_term(pat) else { return Vec::new() };
+        if gid.1 != ii { return Vec::new() }
+        let cons = M::compose(&M::inverse(&gid.0), &M::from_g(&gg));
+        state.g_constraints.push(cons);
+        return vec![state]
+    }
+
     match pat {
         Pattern::PVar(v) => {
             if let Some((g, i)) = state.subst.get(v) {
@@ -65,12 +76,8 @@ fn ematch_impl<'eg, N: Analysis, M: Matcher<N>>(gid: (M::SymG, Id), pat: &Patter
             let mut states = Vec::new();
             for (gg, mut node) in eg.nodes_of_bare(gid.1) {
                 if !matches::<N>(&node, n) { continue }
-                if N::children_mut(&mut node).len() == 0 {
-                    todo!()
-                } else {
-                    let expansion = M::expand(&node);
-                    todo!()
-                }
+                let expansion = M::expand(&node);
+                todo!()
             }
             states
         },

@@ -1,9 +1,9 @@
 use crate::*;
 
-type Rule<N: Analysis> = (Pattern<N::L>, Pattern<N::L>);
+pub type Rule<N: Analysis> = (Pattern<N::L>, Pattern<N::L>);
 
 // Terms are just patterns that don't contain PVars.
-type Term<N: Analysis> = Pattern<N::L>;
+pub type Term<N: Analysis> = Pattern<N::L>;
 
 pub fn eqsat<N: Analysis>(term: Term<N>, rules: &[Rule<N>], n: usize) {
     let mut eg: EGraph<N> = EGraph::new();
