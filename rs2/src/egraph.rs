@@ -134,4 +134,8 @@ impl<N: Analysis> EGraph<N> {
     pub fn get_semilattice(&self, x: &(N::G, Id)) -> N::S {
         self.uf.get_semilattice(x)
     }
+
+    pub fn get_leader_semilattice(&self, x: Id) -> &N::S {
+        self.uf.get_leader_semilattice(x)
+    }
 }
