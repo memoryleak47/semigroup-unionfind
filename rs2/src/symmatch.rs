@@ -64,6 +64,7 @@ fn ematch_impl<'eg, N: Analysis, M: Matcher<N>>(gid: (M::SymG, Id), pat: &Patter
         Pattern::Node(n, childpats) => {
             let mut states = Vec::new();
             for (gg, mut node) in eg.nodes_of_bare(gid.1) {
+                if !matches::<N>(&node, n) { continue }
                 if N::children_mut(&mut node).len() == 0 {
                     todo!()
                 } else {
@@ -74,6 +75,18 @@ fn ematch_impl<'eg, N: Analysis, M: Matcher<N>>(gid: (M::SymG, Id), pat: &Patter
             states
         },
     }
+}
+
+fn matches<N: Analysis>(n1: &N::L, n2: &N::L) -> bool {
+    clear_node::<N>(n1) == clear_node::<N>(n2)
+}
+
+fn clear_node<N: Analysis>(n: &N::L) -> N::L {
+    let mut n = n.clone();
+    for c in N::children_mut(&mut n) {
+        *c = (N::G::identity(), Id(0));
+    }
+    n
 }
 
 // boring stuff
@@ -98,3 +111,4 @@ impl<'eg, N: Analysis, M: Matcher<N>> Default for State<'eg, N, M> {
         }
     }
 }
+
