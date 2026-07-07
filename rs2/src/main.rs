@@ -15,6 +15,9 @@ pub use egraph::*;
 mod ematch;
 pub use ematch::*;
 
+mod symmatch;
+pub use symmatch::*;
+
 mod eqsat;
 pub use eqsat::*;
 

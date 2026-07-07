@@ -37,7 +37,7 @@ pub fn ematch_impl<N: Analysis>(gid: (N::G, Id), pat: &Pattern<N::L>, eg: &EGrap
     }
 }
 
-fn clear_node<N: Analysis>(n: &N::L) -> N::L {
+pub fn clear_node<N: Analysis>(n: &N::L) -> N::L {
     let mut n = n.clone();
     for c in N::children_mut(&mut n) {
         *c = (N::G::identity(), Id(0));
