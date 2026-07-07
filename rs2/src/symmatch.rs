@@ -62,7 +62,16 @@ fn ematch_impl<'eg, N: Analysis, M: Matcher<N>>(gid: (M::SymG, Id), pat: &Patter
             vec![state]
         },
         Pattern::Node(n, childpats) => {
-            todo!()
+            let mut states = Vec::new();
+            for (gg, mut node) in eg.nodes_of_bare(gid.1) {
+                if N::children_mut(&mut node).len() == 0 {
+                    todo!()
+                } else {
+                    let expansion = M::expand(&node);
+                    todo!()
+                }
+            }
+            states
         },
     }
 }
