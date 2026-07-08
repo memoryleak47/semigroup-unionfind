@@ -34,6 +34,8 @@ pub trait Analysis {
 
     fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Either<Self::L, Id>);
 
+    fn implied_nodes(i: Id) -> Box<[(Self::G, Self::L)]> { Box::new([]) }
+
     // should only be called on e-nodes after they have been given `canon`.
     fn mk(n: &Self::L, id: Id, uf: &Unionfind<Self::S>) -> Self::S;
 

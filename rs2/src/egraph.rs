@@ -125,11 +125,15 @@ impl<N: Analysis> EGraph<N> {
         // x has to be a leader.
         assert!(self.find((N::G::identity(), x)).1 == x);
 
-        self.hashcons.iter().filter_map(|(n, (g, i))| {
+        let it1 = self.hashcons.iter().filter_map(|(n, (g, i))| {
             if *i == x {
                 Some((g.inverse(), n.clone()))
             } else { None }
-        }).collect()
+        });
+
+        let it2 = N::implied_nodes(x).into_iter();
+
+        it1.chain(it2).collect()
     }
 
     pub fn classes(&self) -> Box<[Id]> {
