@@ -1,7 +1,6 @@
 use crate::*;
 use std::rc::Rc;
 use std::collections::HashMap;
-use crate::cases::trivial::Subst;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 enum ProofObj {
@@ -109,6 +108,10 @@ impl Analysis for ProofAnalysis {
     }
 
     fn mk(n: &Self::L, id: Id, uf: &Unionfind<Self::S>) -> Self::S { ProofData }
+
+    fn children_mut(node: &mut ProofLang) -> Box<[&mut (Proof, Id)]> {
+        node.args.iter_mut().collect()
+    }
 }
 
 fn justify((p, x): (Proof, Id), j: Symbol) -> (Proof, Id) {
@@ -118,252 +121,96 @@ fn justify((p, x): (Proof, Id), j: Symbol) -> (Proof, Id) {
 
 /// E-Matching
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
-enum Pattern {
-    PVar(PVar),
-    Node(Symbol, Box<[Pattern]>),
-}
+struct ProofMatcher;
 
-// terms share the same layout as patterns.
-type Term = Pattern;
+impl Matcher<ProofAnalysis> for ProofMatcher {
+    type SymG = ();
 
-type PVar = Symbol;
-type L = ProofLang;
-type G = Proof;
+    // l*r*x, thus r is applied first.
+    fn compose(_: &(), _: &()) {}
+    fn inverse(_: &()) {}
 
-// semantics:
-// a := applying the subst to the pattern
-// b := canonical term of x
-// proof translates a to b
-fn ematch(x: Id, pat: &Pattern, eg: &EGraph<ProofAnalysis>) -> Vec<Subst> {
-    ematch_impl(x, pat, eg, &Subst::new())
-}
+    fn from_gvar(_: GVar) {}
+    fn from_g(_: &Proof) {}
 
-fn ematch_impl(x: Id, pat: &Pattern, eg: &EGraph<ProofAnalysis>, subst: &Subst) -> Vec<Subst> {
-    match pat {
-        Pattern::PVar(v) => {
-            let mut subst = subst.clone();
-            if let Some(a) = subst.get(v) {
-                if a != x { return Vec::new() }
-            } else {
-                subst.insert(v.clone(), x);
-            }
-            vec![subst]
-        },
-        Pattern::Node(f, subpats) => {
-            let mut out = Vec::new();
-            for (_, n) in eg.nodes_of_bare(x) {
-                // g*n = i
-                if n.f != *f { continue }
-
-                let mut acc = vec![subst.clone()];
-                for ((grefl, subid), subpat) in n.args.iter().zip(subpats.iter()) {
-                    assert_eq!(*grefl, G::identity());
-                    for subst in std::mem::take(&mut acc) {
-                        acc.extend(ematch_impl(*subid, subpat, eg, &subst));
-                    }
-                }
-                out.extend(acc);
-            }
-            out
-        },
+    fn expand(node: &ProofLang, fresh_gvar: impl FnMut() -> GVar) -> ((), Box<[()]>) {
+        let arity = ProofAnalysis::children_mut(&mut node.clone()).len();
+        ((), vec![(); arity].into_boxed_slice())
     }
-}
 
-fn instantiate(pattern: &Pattern, subst: &Subst, eg: &mut EGraph<ProofAnalysis>) -> (Proof, Id) {
-    match pattern {
-        Pattern::PVar(v) => (G::identity(), subst.get(v).unwrap()),
-        Pattern::Node(f, pargs) => {
-            let f = *f;
-            let mut args = Vec::new();
-            for p in pargs {
-                args.push(instantiate(p, subst, eg));
-            }
-            let args = args.into_boxed_slice();
-            eg.add(&ProofLang { f, args })
-        }
-    }
-}
-
-fn eqsat(eg: &mut EGraph<ProofAnalysis>, rules: &Rules, n: usize) {
-    for _ in 0..n {
-        // 1. e-match
-        let mut future_unions = Vec::new();
-        for (rule_name, lhs, rhs) in rules.iter() {
-            for x in eg.classes() {
-                for subst in ematch(x, lhs, eg) {
-                    future_unions.push((*rule_name, lhs, rhs, subst));
-                }
-            }
-        }
-
-        // 2. instantiate
-        let mut real_future_unions = Vec::new();
-        for (rule_name, lhs, rhs, subst) in future_unions {
-            let lhs = instantiate(lhs, &subst, eg);
-            let rhs = instantiate(rhs, &subst, eg);
-
-            let lhs = justify(lhs.clone(), rule_name);
-            real_future_unions.push((lhs, rhs));
-        }
-
-        // 3. union
-        for (lhs, rhs) in real_future_unions {
-            eg.uf.union(lhs, rhs);
-        }
-
-        // 4. rebuild
-        eg.rebuild();
+    fn solve<'eg>(state: State<'eg, ProofAnalysis, Self>) -> Option<Subst<ProofAnalysis>> {
+        Some(state.subst.into_iter().map(|(pvar, ((), i))| (pvar, (mk_refl(), i))).collect())
     }
 }
 
 /// Tests
 
-// TODO: you can't apply a proof, which uses rules like "?a + (-?a) => 0" as it could use those rules in "reverse" mode, where you have to *guess* the ?a.
-fn apply_proof(term: &Term, p: &Proof, rules: &Rules) -> Term {
-    apply_proof_impl(term, p, rules, false)
+fn atom(s: &str) -> Pattern<ProofLang> {
+    let node = ProofLang {
+        f: Symbol::new(s),
+        args: Box::new([]),
+    };
+    Pattern::Node(node, Box::new([]))
 }
 
-fn apply_proof_impl(term: &Term, p: &Proof, rules: &Rules, rev: bool) -> Term {
-    match &**p {
-        ProofObj::Refl => term.clone(),
-        ProofObj::Sym(p) => apply_proof_impl(term, p, rules, !rev),
-        ProofObj::Trans(p1, p2) => {
-            if rev {
-                let term = apply_proof_impl(term, p1, rules, rev);
-                let term = apply_proof_impl(&term, p2, rules, rev);
-                term
-            } else {
-                let term = apply_proof_impl(term, p2, rules, rev);
-                let term = apply_proof_impl(&term, p1, rules, rev);
-                term
-            }
-        },
-        ProofObj::Congr(subs) => {
-            let Term::Node(f, args) = term else { panic!() };
-            assert_eq!(subs.len(), args.len());
-            let mut outs = Vec::new();
-            for (t, p) in args.iter().zip(subs) {
-                outs.push(apply_proof_impl(t, p, rules, rev));
-            }
-            Term::Node(*f, outs.into_boxed_slice())
-        },
-        ProofObj::Rule(r) => {
-            let (_, lhs, rhs) = rules.iter().find(|(name, _, _)| name == r).unwrap();
-            let (lhs, rhs) = if rev { (rhs, lhs) } else { (lhs, rhs) };
-            let subst = &mut TermSubst::new();
-
-            term_match(term, lhs, subst);
-            pattern_apply(rhs, subst)
-        },
-    }
+fn pvar(s: &str) -> Pattern<ProofLang> {
+    Pattern::PVar(Symbol::new(s))
 }
 
-type TermSubst = HashMap<PVar, Term>;
-
-fn term_match(term: &Term, pat: &Pattern, subst: &mut TermSubst) {
-    match pat {
-        Pattern::PVar(v) => {
-            if let Some(t) = subst.get(&*v) {
-                assert_eq!(term, t);
-            } else {
-                subst.insert(v.clone(), term.clone());
-            }
-        },
-        Pattern::Node(p_f, p_args) => {
-            let Term::Node(t_f, t_args) = term else { panic!() };
-            assert_eq!(p_f, t_f);
-            assert_eq!(p_args.len(), t_args.len());
-            for (tt, pp) in t_args.iter().zip(p_args) {
-                term_match(tt, pp, subst);
-            }
-        },
-    }
+fn f(p1: Pattern<ProofLang>, p2: Pattern<ProofLang>) -> Pattern<ProofLang> {
+    let nil = (mk_refl(), Id(0));
+    let node = ProofLang {
+        f: Symbol::new("f"),
+        args: Box::new([nil.clone(), nil.clone()]),
+    };
+    Pattern::Node(node, Box::new([p1, p2]))
 }
 
-fn pattern_apply(pattern: &Pattern, subst: &TermSubst) -> Term {
-    match pattern {
-        Pattern::PVar(v) => subst[v].clone(),
-        Pattern::Node(f, args) => {
-            let mut outargs = Vec::new();
-            for a in args {
-                outargs.push(pattern_apply(a, subst));
-            }
-            let outargs = outargs.into_boxed_slice();
-            Term::Node(*f, outargs)
-        },
-    }
+fn h(p: Pattern<ProofLang>) -> Pattern<ProofLang> {
+    let nil = (mk_refl(), Id(0));
+    let node = ProofLang {
+        f: Symbol::new("h"),
+        args: Box::new([nil]),
+    };
+    Pattern::Node(node, Box::new([p]))
 }
 
-fn atom(s: &str) -> &'static Pattern {
-    Box::leak(Box::new(Pattern::Node(Symbol::new(s), Box::new([]))))
+fn add(p1: Pattern<ProofLang>, p2: Pattern<ProofLang>) -> Pattern<ProofLang> {
+    let nil = (mk_refl(), Id(0));
+    let node = ProofLang {
+        f: Symbol::new("add"),
+        args: Box::new([nil.clone(), nil.clone()]),
+    };
+    Pattern::Node(node, Box::new([p1, p2]))
 }
 
-fn pvar(s: &str) -> &'static Pattern {
-    Box::leak(Box::new(Pattern::PVar(Symbol::new(s))))
+fn neg(p: Pattern<ProofLang>) -> Pattern<ProofLang> {
+    let nil = (mk_refl(), Id(0));
+    let node = ProofLang {
+        f: Symbol::new("neg"),
+        args: Box::new([nil]),
+    };
+    Pattern::Node(node, Box::new([p]))
 }
 
-fn f(p1: &'static Pattern, p2: &'static Pattern) -> &'static Pattern {
-    Box::leak(Box::new(Pattern::Node(Symbol::new("f"), Box::new([p1.clone(), p2.clone()]))))
+fn zero() -> Pattern<ProofLang> {
+    atom("zero")
 }
 
-fn h(p: &'static Pattern) -> &'static Pattern {
-    Box::leak(Box::new(Pattern::Node(Symbol::new("h"), Box::new([p.clone()]))))
-}
+type Rules = [(Symbol, Pattern<ProofLang>, Pattern<ProofLang>)];
 
-fn add(p1: &'static Pattern, p2: &'static Pattern) -> &'static Pattern {
-    Box::leak(Box::new(Pattern::Node(Symbol::new("add"), Box::new([p1.clone(), p2.clone()]))))
-}
+fn eqsat_test(t1: Term<ProofAnalysis>, t2: Term<ProofAnalysis>, rules: &Rules, n: usize) {
+    // TODO add apply(Symbol) around rhs.
+    let rules: Box<[(Pattern<ProofLang>, Pattern<ProofLang>)]> = rules.iter().map(|(_, l, r)| (l.clone(), r.clone())).collect();
 
-fn neg(p: &'static Pattern) -> &'static Pattern {
-    Box::leak(Box::new(Pattern::Node(Symbol::new("neg"), Box::new([p.clone()]))))
-}
-
-fn zero() -> &'static Pattern {
-    Box::leak(Box::new(Pattern::Node(Symbol::new("zero"), Box::new([]))))
-}
-
-fn add_term(term: &Term, eg: &mut EGraph<ProofAnalysis>) -> (Proof, Id) {
-    match term {
-        Pattern::PVar(_) => panic!("can't add pvar!"),
-        Pattern::Node(f, pargs) => {
-            let f = *f;
-            let mut args = Vec::new();
-            for p in pargs {
-                args.push(add_term(p, eg));
-            }
-            let args = args.into_boxed_slice();
-            eg.add(&ProofLang { f, args })
-        },
-    }
-}
-
-type Rules<'a> = [(Symbol, &'a Pattern, &'a Pattern)];
-
-const DEBUGGING: bool = false;
-fn eqsat_test(t1: &Term, t2: &Term, rules: &Rules, n: usize) {
     let eg: &mut EGraph<ProofAnalysis> = &mut EGraph::new();
+    let x1 = add_expr(&t1, eg);
+    let x2 = add_expr(&t2, eg);
 
-    let x1 = add_term(t1, eg);
-    let x2 = add_term(t2, eg);
-
-    eqsat(eg, rules, n);
-    if DEBUGGING {
-        eg.dump();
-        dbg!(&x1);
-        dbg!(&x2);
-        dbg!(&eg.find(x1.clone()));
-        dbg!(&eg.find(x2.clone()));
-    }
+    eqsat::<_, ProofMatcher>(eg, &rules, n);
     let p = eg.get_g_between(x1.clone(), x2.clone()).unwrap();
-    if DEBUGGING {
-        dbg!(&p);
-    }
 
     dbg!(eg.hashcons.len());
-
-    // TODO: this can fail as explained above.
-    // assert_eq!(apply_proof(t1, &p, rules), t2.clone());
 }
 
 #[test]

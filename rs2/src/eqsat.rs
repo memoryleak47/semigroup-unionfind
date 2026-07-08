@@ -5,20 +5,17 @@ pub type Rule<N: Analysis> = (Pattern<N::L>, Pattern<N::L>);
 // Terms are just patterns that don't contain PVars.
 pub type Term<N: Analysis> = Pattern<N::L>;
 
-pub fn eqsat<N: Analysis, M: Matcher<N>>(term: Term<N>, rules: &[Rule<N>], n: usize) {
-    let mut eg: EGraph<N> = EGraph::new();
-    add_expr(&term, &mut eg);
-
+pub fn eqsat<N: Analysis, M: Matcher<N>>(eg: &mut EGraph<N>, rules: &[Rule<N>], n: usize) {
     for _ in 0..n {
         let mut matches = Vec::new();
         for (lhs, rhs) in rules.iter() {
-            matches.push(ematch::<N, M>(lhs, &eg));
+            matches.push(ematch::<N, M>(lhs, eg));
         }
 
         for (matches_inner, (lhs, rhs)) in matches.into_iter().zip(rules) {
             for subst in matches_inner {
-                let l = instantiate(lhs, &mut eg, &subst);
-                let r = instantiate(lhs, &mut eg, &subst);
+                let l = instantiate(lhs, eg, &subst);
+                let r = instantiate(lhs, eg, &subst);
                 eg.uf.union(l, r);
             }
         }

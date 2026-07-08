@@ -3,6 +3,7 @@ use crate::*;
 pub type Subst<N: Analysis> = HashMap<PVar, (N::G, Id)>;
 pub type PVar = Symbol;
 
+#[derive(Clone)]
 pub enum Pattern<L> {
     PVar(PVar),
 
