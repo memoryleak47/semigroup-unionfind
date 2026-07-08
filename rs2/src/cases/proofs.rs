@@ -222,7 +222,31 @@ fn eqsat_test(t1: Term<ProofAnalysis>, t2: Term<ProofAnalysis>, rules: &Rules, n
 }
 
 #[test]
-fn test_proofs() {
+fn test_proofs_triv1() {
+    let rule = (
+        Symbol::new("a -> b"),
+        atom("a"),
+        atom("b"),
+    );
+    let t1 = atom("a");
+    let t2 = atom("b");
+    eqsat_test(t1, t2, &[rule], 3);
+}
+
+#[test]
+fn test_proofs_triv2() {
+    let rule = (
+        Symbol::new("a -> b"),
+        atom("a"),
+        atom("b"),
+    );
+    let t1 = atom("a");
+    let t2 = atom("b");
+    eqsat_test(t1, t2, &[rule], 3);
+}
+
+#[test]
+fn test_proofs_triv3() {
     let rule = (
         Symbol::new("a -> b"),
         atom("a"),
