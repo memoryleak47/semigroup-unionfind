@@ -276,7 +276,9 @@ fn test_offset_ematching() {
                 OffsetLang::Add([nil, nil]),
                 Box::new([Pattern::PVar(Symbol::from("?x")), Pattern::PVar(Symbol::from("?y"))])
     );
-    for x in symmatch::<OffsetAnalysis, OffsetMatcher>(&pat, &eg) {
+    let matches = ematch::<OffsetAnalysis, OffsetMatcher>(&pat, &eg);
+    for x in &matches {
         dbg!(x);
     }
+    assert_eq!(matches.len(), 3);
 }

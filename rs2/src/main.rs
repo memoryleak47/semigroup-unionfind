@@ -12,11 +12,11 @@ pub use uf::*;
 mod egraph;
 pub use egraph::*;
 
+mod baseline_ematch;
+pub use baseline_ematch::*;
+
 mod ematch;
 pub use ematch::*;
-
-mod symmatch;
-pub use symmatch::*;
 
 mod eqsat;
 pub use eqsat::*;
