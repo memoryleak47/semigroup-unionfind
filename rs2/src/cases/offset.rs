@@ -263,22 +263,44 @@ fn constrain(mut e: SymOffset, mut assignment: Assignment) -> Option<Assignment>
     Some(assignment)
 }
 
+fn mk_pvar(x: &str) -> Pattern<OffsetLang> { Pattern::PVar(Symbol::new(x)) }
+fn mk_const(x: i64) -> Pattern<OffsetLang> { Pattern::Node(OffsetLang::Const(x), Box::new([])) }
+fn mk_symbol(x: &str) -> Pattern<OffsetLang> { Pattern::Node(OffsetLang::Symbol(Symbol::new(x)), Box::new([])) }
+
+fn mk_add(x: Pattern<OffsetLang>, y: Pattern<OffsetLang>) -> Pattern<OffsetLang> {
+    let nil = (Offset(0), Id(0));
+    Pattern::Node(
+        OffsetLang::Add([nil, nil]),
+        Box::new([x, y]),
+    )
+}
+
+fn mk_app(x: Pattern<OffsetLang>, y: Pattern<OffsetLang>) -> Pattern<OffsetLang> {
+    let nil = (Offset(0), Id(0));
+    Pattern::Node(
+        OffsetLang::App([nil, nil]),
+        Box::new([x, y]),
+    )
+}
+
 #[test]
 fn test_offset_ematching() {
     let mut eg: EGraph<OffsetAnalysis> = EGraph::new();
 
-    eg.add(&OffsetLang::Const(42));
+    add_expr(&mk_const(42), &mut eg);
 
-    let a = eg.add(&OffsetLang::Symbol(Symbol::from("a")));
+    let (Offset(0), b) = add_expr(&mk_symbol("b"), &mut eg) else { panic!() };
+    dbg!(b);
 
-    let nil = (Offset(0), Id(0));
-    let pat = Pattern::Node(
-                OffsetLang::Add([nil, nil]),
-                Box::new([Pattern::PVar(Symbol::from("?x")), Pattern::PVar(Symbol::from("?y"))])
-    );
+    let e = mk_app(mk_symbol("a"), mk_symbol("b"));
+    let a = add_expr(&e, &mut eg);
+
+    let pat = mk_app(mk_symbol("a"), mk_add(mk_pvar("?x"), mk_const(17)));
     let matches = ematch::<OffsetAnalysis, OffsetMatcher>(&pat, &eg);
     for x in &matches {
         dbg!(x);
     }
-    assert_eq!(matches.len(), 3);
+    assert_eq!(matches.len(), 1);
+    let m = matches[0].clone();
+    assert_eq!(m[&Symbol::from("?x")], (Offset(-17), b));
 }

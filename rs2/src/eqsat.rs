@@ -26,7 +26,7 @@ pub fn eqsat<N: Analysis, M: Matcher<N>>(term: Term<N>, rules: &[Rule<N>], n: us
     }
 }
 
-fn add_expr<N: Analysis>(t: &Term<N>, eg: &mut EGraph<N>) -> (N::G, Id) {
+pub fn add_expr<N: Analysis>(t: &Term<N>, eg: &mut EGraph<N>) -> (N::G, Id) {
     instantiate(t, eg, &Subst::<N>::new())
 }
 
