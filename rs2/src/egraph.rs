@@ -131,7 +131,7 @@ impl<N: Analysis> EGraph<N> {
             } else { None }
         });
 
-        let it2 = N::implied_nodes(x).into_iter();
+        let it2 = N::implied_nodes(x, self).into_iter();
 
         it1.chain(it2).collect()
     }

@@ -27,14 +27,12 @@ pub enum Either<L, R> {
     R(R),
 }
 
-pub trait Analysis {
+pub trait Analysis: Sized {
     type G: Group;
     type S: Semilattice<G=Self::G>;
     type L: Eq + Hash + Clone;
 
     fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Either<Self::L, Id>);
-
-    fn implied_nodes(i: Id) -> Box<[(Self::G, Self::L)]> { Box::new([]) }
 
     // should only be called on e-nodes after they have been given `canon`.
     fn mk(n: &Self::L, id: Id, uf: &Unionfind<Self::S>) -> Self::S;
@@ -42,4 +40,5 @@ pub trait Analysis {
     fn reify(s: &Self::S) -> Option<Self::L> { None }
 
     fn children_mut(l: &mut Self::L) -> Box<[&mut (Self::G, Id)]> { todo!("children_mut unsupported!") }
+    fn implied_nodes(i: Id, eg: &EGraph<Self>) -> Box<[(Self::G, Self::L)]> { Box::new([]) }
 }

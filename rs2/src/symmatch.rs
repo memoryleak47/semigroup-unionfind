@@ -30,7 +30,7 @@ fn alloc_gvar<N: Analysis, M: Matcher<N>>(state: &mut State<N, M>) -> GVar {
     x
 }
 
-fn ematch<N: Analysis, M: Matcher<N>>(pat: &Pattern<N::L>, eg: &EGraph<N>) -> Vec<Subst<N>> {
+pub fn symmatch<N: Analysis, M: Matcher<N>>(pat: &Pattern<N::L>, eg: &EGraph<N>) -> Vec<Subst<N>> {
     let mut state: State<N, M> = Default::default();
     let gv0 = alloc_gvar(&mut state);
     let g0 = M::from_gvar(gv0);
