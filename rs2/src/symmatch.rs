@@ -10,7 +10,7 @@ pub trait Matcher<N: Analysis>: Sized {
     fn from_gvar(id: GVar) -> Self::SymG;
     fn from_g(g: &N::G) -> Self::SymG;
 
-    fn expand(node: &N::L) -> (/*up*/Self::SymG, /*children*/Box<[Self::SymG]>);
+    fn expand(node: &N::L, fresh_gvar: impl FnMut() -> GVar) -> (/*up*/Self::SymG, /*children*/Box<[Self::SymG]>);
 
     fn solve<'eg>(state: State<'eg, N, Self>) -> Option<Subst<N>>;
 }
@@ -76,7 +76,9 @@ fn ematch_impl<'eg, N: Analysis, M: Matcher<N>>((g, id): (M::SymG, Id), pat: &Pa
             let mut states = Vec::new();
             for (gn, mut node) in eg.nodes_of_bare(id) {
                 if !matches::<N>(&node, patnode) { continue }
-                let (pexp, chexp) = M::expand(&node);
+
+                let mut state = state.clone();
+                let (pexp, chexp) = M::expand(&node, || alloc_gvar(&mut state));
 
                 // goal: g*id = Pattern::Node(patnode, childpats)
                 // fact: gn*node = id
