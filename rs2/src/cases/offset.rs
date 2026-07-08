@@ -197,10 +197,10 @@ impl Matcher<OffsetAnalysis> for OffsetMatcher {
 
     fn solve<'eg>(mut state: State<'eg, OffsetAnalysis, Self>) -> Option<Subst<OffsetAnalysis>> {
         let mut assignment: Assignment = BTreeMap::new();
-        for (x, s) in &state.gs_constraints {
-            if let ConstProp(Some(o)) = s {
-                assignment.insert(*x, OffsetMatcher::from_g(&Offset(*o)));
-            }
+        for (x, _) in &state.gs_constraints {
+            // is this right? it appears we don't require S-restricted GVars.
+            // There are no self-loops after all.
+            assignment.insert(*x, OffsetMatcher::from_g(&Offset(0)));
         }
 
         for d in &state.g_constraints {
