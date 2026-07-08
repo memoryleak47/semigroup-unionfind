@@ -1,5 +1,7 @@
 use crate::*;
 
+type Pat = Pattern<OffsetAnalysis>;
+
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 struct Offset(i64);
 
@@ -263,11 +265,11 @@ fn constrain(mut e: SymOffset, mut assignment: Assignment) -> Option<Assignment>
     Some(assignment)
 }
 
-fn mk_pvar(x: &str) -> Pattern<OffsetLang> { Pattern::PVar(Symbol::new(x)) }
-fn mk_const(x: i64) -> Pattern<OffsetLang> { Pattern::Node(OffsetLang::Const(x), Box::new([])) }
-fn mk_symbol(x: &str) -> Pattern<OffsetLang> { Pattern::Node(OffsetLang::Symbol(Symbol::new(x)), Box::new([])) }
+fn mk_pvar(x: &str) -> Pat { Pattern::PVar(Symbol::new(x)) }
+fn mk_const(x: i64) -> Pat { Pattern::Node(OffsetLang::Const(x), Box::new([])) }
+fn mk_symbol(x: &str) -> Pat { Pattern::Node(OffsetLang::Symbol(Symbol::new(x)), Box::new([])) }
 
-fn mk_add(x: Pattern<OffsetLang>, y: Pattern<OffsetLang>) -> Pattern<OffsetLang> {
+fn mk_add(x: Pat, y: Pat) -> Pat {
     let nil = (Offset(0), Id(0));
     Pattern::Node(
         OffsetLang::Add([nil, nil]),
@@ -275,7 +277,7 @@ fn mk_add(x: Pattern<OffsetLang>, y: Pattern<OffsetLang>) -> Pattern<OffsetLang>
     )
 }
 
-fn mk_app(x: Pattern<OffsetLang>, y: Pattern<OffsetLang>) -> Pattern<OffsetLang> {
+fn mk_app(x: Pat, y: Pat) -> Pat {
     let nil = (Offset(0), Id(0));
     Pattern::Node(
         OffsetLang::App([nil, nil]),

@@ -3,19 +3,21 @@ use crate::*;
 pub type Subst<N: Analysis> = HashMap<PVar, (N::G, Id)>;
 pub type PVar = Symbol;
 
-#[derive(Clone)]
-pub enum Pattern<L> {
+pub enum Pattern<N: Analysis> {
     PVar(PVar),
 
     // We entirely ignore the children of the Node L here.
     // They are considered to be replaced by these pattern-children.
-    Node(L, Box<[Pattern<L>]>),
+    Node(N::L, Box<[Pattern<N>]>),
+
+    G(N::G, Box<Pattern<N>>),
 }
 
-pub fn is_term<N: Analysis>(pat: &Pattern<N::L>) -> bool {
+pub fn is_term<N: Analysis>(pat: &Pattern<N>) -> bool {
     match pat {
         Pattern::PVar(_) => false,
         Pattern::Node(_, subpats) => subpats.iter().all(is_term::<N>),
+        Pattern::G(..) => false,
     }
 }
 
@@ -49,7 +51,7 @@ fn alloc_gvar<N: Analysis, M: Matcher<N>>(state: &mut State<N, M>) -> GVar {
     x
 }
 
-pub fn ematch<N: Analysis, M: Matcher<N>>(pat: &Pattern<N::L>, eg: &EGraph<N>) -> Vec<Subst<N>> {
+pub fn ematch<N: Analysis, M: Matcher<N>>(pat: &Pattern<N>, eg: &EGraph<N>) -> Vec<Subst<N>> {
     let mut state: State<N, M> = Default::default();
     let gv0 = alloc_gvar(&mut state);
     let g0 = M::from_gvar(gv0);
@@ -64,7 +66,7 @@ pub fn ematch<N: Analysis, M: Matcher<N>>(pat: &Pattern<N::L>, eg: &EGraph<N>) -
     states.into_iter().map(M::solve).flatten().collect()
 }
 
-fn ematch_impl<'eg, N: Analysis, M: Matcher<N>>((g, id): (M::SymG, Id), pat: &Pattern<N::L>, eg: &'eg EGraph<N>, mut state: State<'eg, N, M>) -> Vec<State<'eg, N, M>> {
+fn ematch_impl<'eg, N: Analysis, M: Matcher<N>>((g, id): (M::SymG, Id), pat: &Pattern<N>, eg: &'eg EGraph<N>, mut state: State<'eg, N, M>) -> Vec<State<'eg, N, M>> {
     let id_v = alloc_gvar(&mut state);
     let g = M::compose(&g, &M::from_gvar(id_v));
     state.gs_constraints.insert(id_v, eg.get_leader_semilattice(id));
@@ -125,6 +127,7 @@ fn ematch_impl<'eg, N: Analysis, M: Matcher<N>>((g, id): (M::SymG, Id), pat: &Pa
             }
             states
         },
+        Pattern::G(..) => unimplemented!(),
     }
 }
 
@@ -163,3 +166,13 @@ impl<'eg, N: Analysis, M: Matcher<N>> Default for State<'eg, N, M> {
     }
 }
 
+
+impl<N: Analysis> Clone for Pattern<N> {
+    fn clone(&self) -> Self {
+        match self {
+            Pattern::PVar(v) => Pattern::PVar(*v),
+            Pattern::Node(n, children) => Pattern::Node(n.clone(), children.clone()),
+            Pattern::G(g, pat) => Pattern::G(g.clone(), pat.clone()),
+        }
+    }
+}

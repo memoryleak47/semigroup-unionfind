@@ -55,6 +55,11 @@ impl<N: Analysis> EGraph<N> {
                 }
                 self.lookup(&n)
             },
+            Pattern::G(g, t) => {
+                let (g2, x) = self.lookup_term(t)?;
+                let g = N::G::compose(&g, &g2);
+                Some((g, x))
+            },
         }
     }
 

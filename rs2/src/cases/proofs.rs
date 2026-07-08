@@ -2,6 +2,8 @@ use crate::*;
 use std::rc::Rc;
 use std::collections::HashMap;
 
+type Pat = Pattern<ProofAnalysis>;
+
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 enum ProofObj {
     Refl,
@@ -145,7 +147,7 @@ impl Matcher<ProofAnalysis> for ProofMatcher {
 
 /// Tests
 
-fn atom(s: &str) -> Pattern<ProofLang> {
+fn atom(s: &str) -> Pat {
     let node = ProofLang {
         f: Symbol::new(s),
         args: Box::new([]),
@@ -153,11 +155,11 @@ fn atom(s: &str) -> Pattern<ProofLang> {
     Pattern::Node(node, Box::new([]))
 }
 
-fn pvar(s: &str) -> Pattern<ProofLang> {
+fn pvar(s: &str) -> Pat {
     Pattern::PVar(Symbol::new(s))
 }
 
-fn f(p1: Pattern<ProofLang>, p2: Pattern<ProofLang>) -> Pattern<ProofLang> {
+fn f(p1: Pat, p2: Pat) -> Pat {
     let nil = (mk_refl(), Id(0));
     let node = ProofLang {
         f: Symbol::new("f"),
@@ -166,7 +168,7 @@ fn f(p1: Pattern<ProofLang>, p2: Pattern<ProofLang>) -> Pattern<ProofLang> {
     Pattern::Node(node, Box::new([p1, p2]))
 }
 
-fn h(p: Pattern<ProofLang>) -> Pattern<ProofLang> {
+fn h(p: Pat) -> Pat {
     let nil = (mk_refl(), Id(0));
     let node = ProofLang {
         f: Symbol::new("h"),
@@ -175,7 +177,7 @@ fn h(p: Pattern<ProofLang>) -> Pattern<ProofLang> {
     Pattern::Node(node, Box::new([p]))
 }
 
-fn add(p1: Pattern<ProofLang>, p2: Pattern<ProofLang>) -> Pattern<ProofLang> {
+fn add(p1: Pat, p2: Pat) -> Pat {
     let nil = (mk_refl(), Id(0));
     let node = ProofLang {
         f: Symbol::new("add"),
@@ -184,7 +186,7 @@ fn add(p1: Pattern<ProofLang>, p2: Pattern<ProofLang>) -> Pattern<ProofLang> {
     Pattern::Node(node, Box::new([p1, p2]))
 }
 
-fn neg(p: Pattern<ProofLang>) -> Pattern<ProofLang> {
+fn neg(p: Pat) -> Pat {
     let nil = (mk_refl(), Id(0));
     let node = ProofLang {
         f: Symbol::new("neg"),
@@ -193,15 +195,21 @@ fn neg(p: Pattern<ProofLang>) -> Pattern<ProofLang> {
     Pattern::Node(node, Box::new([p]))
 }
 
-fn zero() -> Pattern<ProofLang> {
+fn zero() -> Pat {
     atom("zero")
 }
 
-type Rules = [(Symbol, Pattern<ProofLang>, Pattern<ProofLang>)];
+type Rules = [(Symbol, Pat, Pat)];
 
 fn eqsat_test(t1: Term<ProofAnalysis>, t2: Term<ProofAnalysis>, rules: &Rules, n: usize) {
-    // TODO add apply(Symbol) around rhs.
-    let rules: Box<[(Pattern<ProofLang>, Pattern<ProofLang>)]> = rules.iter().map(|(_, l, r)| (l.clone(), r.clone())).collect();
+    let rules: Box<[(Pat, Pat)]> = rules.iter().map(|(rule_id, l, r)| {
+        let annotation = Rc::new(ProofObj::Rule(*rule_id)).inverse();
+
+        let l = l.clone();
+        let r = Pattern::G(annotation, Box::new(r.clone()));
+
+        (l, r)
+    }).collect();
 
     let eg: &mut EGraph<ProofAnalysis> = &mut EGraph::new();
     let x1 = add_expr(&t1, eg);

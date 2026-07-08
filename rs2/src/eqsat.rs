@@ -1,9 +1,9 @@
 use crate::*;
 
-pub type Rule<N: Analysis> = (Pattern<N::L>, Pattern<N::L>);
+pub type Rule<N: Analysis> = (Pattern<N>, Pattern<N>);
 
 // Terms are just patterns that don't contain PVars.
-pub type Term<N: Analysis> = Pattern<N::L>;
+pub type Term<N: Analysis> = Pattern<N>;
 
 pub fn eqsat<N: Analysis, M: Matcher<N>>(eg: &mut EGraph<N>, rules: &[Rule<N>], n: usize) {
     for _ in 0..n {
@@ -27,7 +27,7 @@ pub fn add_expr<N: Analysis>(t: &Term<N>, eg: &mut EGraph<N>) -> (N::G, Id) {
     instantiate(t, eg, &Subst::<N>::new())
 }
 
-fn instantiate<N: Analysis>(pat: &Pattern<N::L>, eg: &mut EGraph<N>, subst: &Subst<N>) -> (N::G, Id) {
+fn instantiate<N: Analysis>(pat: &Pattern<N>, eg: &mut EGraph<N>, subst: &Subst<N>) -> (N::G, Id) {
     match pat {
         Pattern::PVar(var) => subst[var].clone(),
         Pattern::Node(n, pargs) => {
@@ -36,6 +36,11 @@ fn instantiate<N: Analysis>(pat: &Pattern<N::L>, eg: &mut EGraph<N>, subst: &Sub
                 *c = instantiate(nc, eg, subst);
             }
             eg.add(&n)
+        },
+        Pattern::G(g, pat) => {
+            let (g2, x) = instantiate(pat, eg, subst);
+            let g = N::G::compose(&g, &g2);
+            (g, x)
         },
     }
 }
