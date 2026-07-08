@@ -15,7 +15,7 @@ pub fn eqsat<N: Analysis, M: Matcher<N>>(eg: &mut EGraph<N>, rules: &[Rule<N>], 
         for (matches_inner, (lhs, rhs)) in matches.into_iter().zip(rules) {
             for subst in matches_inner {
                 let l = instantiate(lhs, eg, &subst);
-                let r = instantiate(lhs, eg, &subst);
+                let r = instantiate(rhs, eg, &subst);
                 eg.uf.union(l, r);
             }
         }

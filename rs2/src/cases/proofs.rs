@@ -136,6 +136,10 @@ impl Matcher<ProofAnalysis> for ProofMatcher {
     fn from_g(_: &Proof) {}
 
     fn expand(node: &ProofLang, fresh_gvar: impl FnMut() -> GVar) -> ((), Box<[()]>) {
+        // NOTE: A more faithful implementation would expand
+        //   f(x1, ..., xn) to
+        //   cong(g1, ..., gn) * f(g1⁻¹*x1, ..., gn⁻¹*xn)
+        // This however doesn't appear to be necessary, as the Proof theory always has a trivial solution, which we return in solve.
         let arity = ProofAnalysis::children_mut(&mut node.clone()).len();
         ((), vec![(); arity].into_boxed_slice())
     }
