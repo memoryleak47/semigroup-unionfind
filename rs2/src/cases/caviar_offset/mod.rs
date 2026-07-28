@@ -73,7 +73,7 @@ impl Semilattice for Option<i64> {
 
 pub type OffsetId = (Offset, Id);
 
-#[derive(Hash, PartialEq, Eq, Clone, Copy)]
+#[derive(Hash, PartialEq, Eq, Clone, Copy, Debug)]
 pub enum CaviarLang {
     Add([OffsetId; 2]),
     Sub([OffsetId; 2]),

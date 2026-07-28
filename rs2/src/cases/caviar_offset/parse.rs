@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum Thing<'a> {
     Unparsed(&'a str),
     Parsed(Pat),
@@ -48,6 +48,13 @@ pub fn parse(s: &str) -> Pat {
                 things.push(p);
                 things.extend(rst);
             },
+            [Unparsed("("), Parsed(p), Unparsed(")"), rst@..] => {
+                let p = Parsed(p.clone());
+                let rst: Box<[Thing<'_>]> = rst.iter().cloned().collect();
+                things.truncate(i);
+                things.push(p);
+                things.extend(rst);
+            },
             [Unparsed(x), ..] => {
                 if x.starts_with("?") {
                     things[i] = Thing::Parsed(Pat::PVar(crate::Symbol::new(x)));
@@ -60,7 +67,9 @@ pub fn parse(s: &str) -> Pat {
             _ => {},
         }
     }
-    assert_eq!(things.len(), 1);
+    if things.len() != 1 {
+        panic!("Failed to parse with remaining state {things:?}");
+    }
     let Parsed(x) = things.into_iter().next().unwrap() else { panic!() };
     x
 }
