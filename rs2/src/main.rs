@@ -6,6 +6,8 @@ use std::fmt::Debug;
 mod api;
 pub use api::*;
 
+mod fmt;
+
 mod uf;
 pub use uf::*;
 
