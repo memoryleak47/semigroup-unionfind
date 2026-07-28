@@ -9,6 +9,14 @@ use matching::*;
 mod analysis;
 use analysis::*;
 
+mod parse;
+use parse::*;
+
+mod rules;
+use rules::*;
+
+type Pat = Pattern<OffsetAnalysis>;
+
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct Offset(i64);
 
