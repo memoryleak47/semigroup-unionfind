@@ -46,8 +46,8 @@ impl Matcher<OffsetAnalysis> for OffsetMatcher {
         }
     }
 
-    fn expand(node: &OffsetLang, mut fresh_gvar: impl FnMut() -> GVar) -> (/*up*/Self::SymG, /*children*/Box<[Self::SymG]>) {
-        if let OffsetLang::Add(_) = node {
+    fn expand(node: &CaviarLang, mut fresh_gvar: impl FnMut() -> GVar) -> (/*up*/Self::SymG, /*children*/Box<[Self::SymG]>) {
+        if let CaviarLang::Add(_) = node {
             let o1 = OffsetMatcher::from_gvar(fresh_gvar());
             let o2 = OffsetMatcher::from_gvar(fresh_gvar());
             (OffsetMatcher::compose(&o1, &o2), Box::new([OffsetMatcher::inverse(&o1), OffsetMatcher::inverse(&o2)]))

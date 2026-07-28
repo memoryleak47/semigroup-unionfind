@@ -3,8 +3,8 @@ use crate::*;
 mod matching;
 use matching::*;
 
-mod testing;
-use testing::*;
+// mod testing;
+// use testing::*;
 
 mod analysis;
 use analysis::*;
@@ -32,27 +32,22 @@ impl Group for Offset {
     }
 }
 
-pub struct ConstProp(Option<i64>);
-
-impl Semilattice for ConstProp {
+impl Semilattice for Option<i64> {
     type G = Offset;
 
     fn act(g: &Self::G, s: &Self) -> Self {
-        match s {
-            ConstProp(Some(x)) => ConstProp(Some(g.apply(*x))),
-            ConstProp(None) => ConstProp(None),
-        }
+        s.map(|x| g.apply(x))
     }
 
     fn merge(&mut self, other: Self) -> bool {
-        let ConstProp(Some(o)) = other else { return false };
+        let Some(o) = other else { return false };
 
         match *self {
-            ConstProp(None) => {
-                *self = ConstProp(Some(o));
+            None => {
+                *self = Some(o);
                 true
             },
-            ConstProp(Some(x)) => {
+            Some(x) => {
                 assert_eq!(x, o);
                 false
             },
@@ -71,11 +66,23 @@ impl Semilattice for ConstProp {
 pub type OffsetId = (Offset, Id);
 
 #[derive(Hash, PartialEq, Eq, Clone, Copy)]
-pub enum OffsetLang {
+pub enum CaviarLang {
     Add([OffsetId; 2]),
-    Const(i64),
-
-    // Symbol + App are able to express anything.
+    Sub([OffsetId; 2]),
+    Mul([OffsetId; 2]),
+    Div([OffsetId; 2]),
+    Mod([OffsetId; 2]),
+    Max([OffsetId; 2]),
+    Min([OffsetId; 2]),
+    Lt([OffsetId; 2]),
+    Gt([OffsetId; 2]),
+    Not(OffsetId),
+    Let([OffsetId;2]),
+    Get([OffsetId;2]),
+    Eq([OffsetId; 2]),
+    IEq([OffsetId; 2]),
+    Or([OffsetId; 2]),
+    And([OffsetId; 2]),
+    Constant(i64),
     Symbol(Symbol),
-    App([OffsetId; 2]),
 }
