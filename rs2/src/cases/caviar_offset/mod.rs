@@ -97,7 +97,10 @@ pub enum CaviarLang {
 
 pub fn run_caviar() {
     let rules = mk_rules();
-    for (l, r) in parse_expressions("caviar-expressions.json") {
+    for (i, (l, r)) in parse_expressions("caviar-expressions.json").into_iter().enumerate().take(200) {
+        dbg!(i);
+        if i == 71 || i == 104 || i == 197 { println!("SKIP"); continue }
+        dbg!(&l);
         let mut eg = EGraph::new();
         add_expr(&l, &mut eg);
         general_eqsat::<CaviarAnalysis, CaviarMatcher>(&mut eg, &*rules, 3);
