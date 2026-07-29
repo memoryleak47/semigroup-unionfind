@@ -200,10 +200,31 @@ pub fn mk_rules() -> Box<[GeneralRule<CaviarAnalysis>]> {
     ])
 }
 
-fn compare_c0_c1<N: Analysis>(s1: &str, s2: &str, s3: &str) -> impl Fn(&(N::G, Id), &Subst<N>, &EGraph<N>) -> bool { |gid, subst, eg| todo!() }
-fn is_not_zero<N: Analysis>(s: &str) -> impl Fn(&(N::G, Id), &Subst<N>, &EGraph<N>) -> bool { |gid, subst, eg| todo!() }
-fn is_const_pos<N: Analysis>(s: &str) -> impl Fn(&(N::G, Id), &Subst<N>, &EGraph<N>) -> bool { |gid, subst, eg| todo!() }
-fn is_const_neg<N: Analysis>(s: &str) -> impl Fn(&(N::G, Id), &Subst<N>, &EGraph<N>) -> bool { |gid, subst, eg| todo!() }
+// TODO impl
+fn compare_c0_c1(s1: &str, s2: &str, s3: &str) -> impl Fn(&(Offset, Id), &Subst<CaviarAnalysis>, &EGraph<CaviarAnalysis>) -> bool { |gid, subst, eg| false }
+
+fn is_not_zero(s: &str) -> impl Fn(&(Offset, Id), &Subst<CaviarAnalysis>, &EGraph<CaviarAnalysis>) -> bool {
+    let s = Symbol::from(s);
+    move |gid, subst, eg| {
+        // TODO: unsound, but just as unsound as the original is.
+        eg.get_semilattice(&subst[&s]) != Some(0)
+    }
+}
+
+fn is_const_pos(s: &str) -> impl Fn(&(Offset, Id), &Subst<CaviarAnalysis>, &EGraph<CaviarAnalysis>) -> bool {
+    let s = Symbol::from(s);
+    move |gid, subst, eg| {
+        matches!(eg.get_semilattice(&subst[&s]), Some(1..))
+    }
+}
+
+fn is_const_neg(s: &str) -> impl Fn(&(Offset, Id), &Subst<CaviarAnalysis>, &EGraph<CaviarAnalysis>) -> bool {
+    let s = Symbol::from(s);
+    move |gid, subst, eg| {
+        matches!(eg.get_semilattice(&subst[&s]), Some(..0))
+    }
+}
+
 
 #[test]
 fn rules_parse() {
