@@ -2,7 +2,7 @@ use super::*;
 
 use std::collections::BTreeMap;
 
-pub struct OffsetMatcher;
+pub struct CaviarMatcher;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct SymOffset {
@@ -10,7 +10,7 @@ pub struct SymOffset {
     vars: BTreeMap<GVar, i64>,
 }
 
-impl Matcher<OffsetAnalysis> for OffsetMatcher {
+impl Matcher<CaviarAnalysis> for CaviarMatcher {
     type SymG = SymOffset;
 
     fn compose(l: &Self::SymG, r: &Self::SymG) -> Self::SymG {
@@ -48,21 +48,21 @@ impl Matcher<OffsetAnalysis> for OffsetMatcher {
 
     fn expand(node: &CaviarLang, mut fresh_gvar: impl FnMut() -> GVar) -> (/*up*/Self::SymG, /*children*/Box<[Self::SymG]>) {
         if let CaviarLang::Add(_) = node {
-            let o1 = OffsetMatcher::from_gvar(fresh_gvar());
-            let o2 = OffsetMatcher::from_gvar(fresh_gvar());
-            (OffsetMatcher::compose(&o1, &o2), Box::new([OffsetMatcher::inverse(&o1), OffsetMatcher::inverse(&o2)]))
+            let o1 = CaviarMatcher::from_gvar(fresh_gvar());
+            let o2 = CaviarMatcher::from_gvar(fresh_gvar());
+            (CaviarMatcher::compose(&o1, &o2), Box::new([CaviarMatcher::inverse(&o1), CaviarMatcher::inverse(&o2)]))
         } else {
-            let arity = OffsetAnalysis::children_mut(&mut node.clone()).len();
+            let arity = CaviarAnalysis::children_mut(&mut node.clone()).len();
             (SymOffset::zero(), vec![SymOffset::zero(); arity].into_boxed_slice())
         }
     }
 
-    fn solve<'eg>(mut state: State<'eg, OffsetAnalysis, Self>) -> Option<Subst<OffsetAnalysis>> {
+    fn solve<'eg>(mut state: State<'eg, CaviarAnalysis, Self>) -> Option<Subst<CaviarAnalysis>> {
         let mut assignment: Assignment = BTreeMap::new();
         for (x, _) in &state.gs_constraints {
             // is this right? it appears we don't require S-restricted GVars.
             // There are no self-loops after all.
-            assignment.insert(*x, OffsetMatcher::from_g(&Offset(0)));
+            assignment.insert(*x, CaviarMatcher::from_g(&Offset(0)));
         }
 
         for d in &state.g_constraints {
@@ -103,7 +103,7 @@ impl SymOffset {
         let mut new = self.clone();
         for (v, val) in assignment {
             let coef = new.vars.remove(&v).unwrap_or(0);
-            new = OffsetMatcher::compose(&new, &val.scale(coef));
+            new = CaviarMatcher::compose(&new, &val.scale(coef));
         }
         new
     }

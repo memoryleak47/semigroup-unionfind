@@ -15,7 +15,7 @@ use parse::*;
 mod rules;
 use rules::*;
 
-type Pat = Pattern<OffsetAnalysis>;
+type Pat = Pattern<CaviarAnalysis>;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct Offset(i64);
@@ -100,7 +100,7 @@ pub fn run_caviar() {
     for (l, r) in parse_expressions("caviar-expressions.json") {
         let mut eg = EGraph::new();
         add_expr(&l, &mut eg);
-        general_eqsat::<OffsetAnalysis, OffsetMatcher>(&mut eg, &*rules, 3);
+        general_eqsat::<CaviarAnalysis, CaviarMatcher>(&mut eg, &*rules, 3);
 
         if let (Some(ll), Some(rr)) = (eg.lookup_term(&l), eg.lookup_term(&r)) && eg.is_equal(ll, rr) {
             println!("proof found!");

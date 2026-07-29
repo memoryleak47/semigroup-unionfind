@@ -1,8 +1,8 @@
 use super::*;
 
-pub struct OffsetAnalysis;
+pub struct CaviarAnalysis;
 
-impl Analysis for OffsetAnalysis {
+impl Analysis for CaviarAnalysis {
     type G = Offset;
     type S = Option<i64>;
     type L = CaviarLang;
