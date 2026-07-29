@@ -111,4 +111,28 @@ impl Analysis for OffsetAnalysis {
             Symbol(_) => Box::new([]),
         }
     }
+
+    fn prettyprint(n: &CaviarLang, c: Box<[String]>) -> String {
+        use CaviarLang::*;
+        match n {
+            Add([_, _]) => format!("(+ {} {})", &c[0], &c[1]),
+            Sub([_, _]) => format!("(- {} {})", &c[0], &c[1]),
+            Mul([l, r]) => format!("(* {} {})", &c[0], &c[1]),
+            Div([l, r]) => format!("(/ {} {})", &c[0], &c[1]),
+            Mod([l, r]) => format!("(% {} {})", &c[0], &c[1]),
+            Max([l, r]) => format!("(max {} {})", &c[0], &c[1]),
+            Min([l, r]) => format!("(min {} {})", &c[0], &c[1]),
+            Lt([l, r]) => format!("(< {} {})", &c[0], &c[1]),
+            Gt([l, r]) => format!("(> {} {})", &c[0], &c[1]),
+            Not(x) => format!("(! {})", &c[0]),
+            Let([l, r]) => format!("(<= {} {})", &c[0], &c[1]),
+            Get([l, r]) => format!("(>= {} {})", &c[0], &c[1]),
+            Eq([l, r]) => format!("(== {} {})", &c[0], &c[1]),
+            IEq([l, r]) => format!("(!= {} {})", &c[0], &c[1]),
+            Or([l, r]) => format!("(|| {} {})", &c[0], &c[1]),
+            And([l, r]) => format!("(&& {} {})", &c[0], &c[1]),
+            Constant(c) => c.to_string(),
+            Symbol(x) => x.to_string(),
+        }
+    }
 }

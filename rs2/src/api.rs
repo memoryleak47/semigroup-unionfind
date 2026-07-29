@@ -1,6 +1,6 @@
 use crate::*;
 
-pub trait Group: Clone + Eq {
+pub trait Group: Clone + Eq + Debug {
     fn identity() -> Self;
 
     // We typically left-multiply stuff with G, so `g*_`.
@@ -41,4 +41,7 @@ pub trait Analysis: Sized {
 
     fn children_mut(l: &mut Self::L) -> Box<[&mut (Self::G, Id)]> { todo!("children_mut unsupported!") }
     fn implied_nodes(i: Id, eg: &EGraph<Self>) -> Box<[(Self::G, Self::L)]> { Box::new([]) }
+
+    // child_strings as Box<[String]> is the worst thing you could do performance-wise. But printing perf doesn't matter rn.
+    fn prettyprint(l: &Self::L, child_strings: Box<[String]>) -> String { todo!("can't prettyprint") }
 }
