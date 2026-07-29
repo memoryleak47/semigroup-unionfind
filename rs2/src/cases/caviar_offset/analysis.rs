@@ -2,6 +2,8 @@ use super::*;
 
 pub struct CaviarAnalysis;
 
+pub const ACTIVE: bool = false;
+
 impl Analysis for CaviarAnalysis {
     type G = Offset;
     type S = Option<i64>;
@@ -9,6 +11,14 @@ impl Analysis for CaviarAnalysis {
 
     fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Either<Self::L, Id>) {
         use CaviarLang::*;
+        if !ACTIVE {
+            let mut n = n.clone();
+            for ch in CaviarAnalysis::children_mut(&mut n) {
+                *ch = uf.find(*ch);
+            }
+            return (Offset(0), Either::L(n))
+        }
+
         match n {
             Add([x, y]) => {
                 let (Offset(ox), x) = uf.find(*x);
@@ -76,6 +86,8 @@ impl Analysis for CaviarAnalysis {
     }
 
     fn implied_nodes(x: Id, eg: &EGraph<Self>) -> Box<[(Self::G, Self::L)]> {
+        if !ACTIVE { return Box::new([]) }
+
         let Some(zero) = eg.lookup(&CaviarLang::Constant(0)) else { return Box::new([]) };
         let x = (Offset(0), x);
 
