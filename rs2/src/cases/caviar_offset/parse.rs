@@ -86,6 +86,7 @@ pub fn parse_expressions(filename: &str) -> Vec<(Pat, Pat)> {
 
     let mut out = Vec::new();
     for x in val.as_array().unwrap() {
+        // TODO: use x["rules"] aswell.
         let x = &x["expression"];
         let start = x["start"].as_str().unwrap();
         let end = x["end"].as_str().unwrap();
