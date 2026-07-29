@@ -4,11 +4,19 @@ macro_rules! rw {
     (
         $name:expr;
         $lhs:tt => $rhs:tt
-        $(if $cond:expr)*
     ) => {{
         let searcher = parse($lhs);
         let applier = pattern_applier(parse($rhs));
-        // TODO handle if conditions & add name.
+        (searcher, applier)
+    }};
+
+    (
+        $name:expr;
+        $lhs:tt => $rhs:tt
+        if $cond:expr
+    ) => {{
+        let searcher = parse($lhs);
+        let applier = cond_pattern_applier(parse($rhs), $cond);
         (searcher, applier)
     }};
 }
@@ -25,7 +33,7 @@ pub fn mk_rules() -> Box<[GeneralRule<CaviarAnalysis>]> {
         rw!("add-denom-div" ; "(/ (+ ?a (* ?b ?c)) ?b)"     => "(+ (/ ?a ?b) ?c)"),
         rw!("add-div-mod"   ; "( + ( / ?x 2 ) ( % ?x 2 ) )" => "( / ( + ?x 1 ) 2 )"),
         //FOLD
-        rw!("add-const"     ; "( + (* ?x ?a) (* ?y ?b))"    => "( * (+ (* ?x (/ ?a ?b)) ?y) ?b)" if crate::trs::compare_c0_c1("?a", "?b", "%0")),
+        rw!("add-const"     ; "( + (* ?x ?a) (* ?y ?b))"    => "( * (+ (* ?x (/ ?a ?b)) ?y) ?b)" if compare_c0_c1("?a", "?b", "%0")),
 
         // AND-OR RULES
         rw!("and-over-or"   ;  "(&& ?a (|| ?b ?c))"        => "(|| (&& ?a ?b) (&& ?a ?c))"),
@@ -38,8 +46,8 @@ pub fn mk_rules() -> Box<[GeneralRule<CaviarAnalysis>]> {
         rw!("and-x-1"           ;  "(&& 1 ?x)"                          => "?x"),
         rw!("and-x-x"           ;  "(&& ?x ?x)"                         => "?x"),
         rw!("and-x-not-x"       ;  "(&& ?x (! ?x))"                     => "0"),
-        rw!("and-eq-eq"         ;  "( && ( == ?x ?c0 ) ( == ?x ?c1 ) )" => "0" if crate::trs::compare_c0_c1("?c1", "?c0", "!=")),
-        rw!("and-ineq-eq"       ;  "( && ( != ?x ?c0 ) ( == ?x ?c1 ) )" => "( == ?x ?c1 )" if crate::trs::compare_c0_c1("?c1", "?c0", "!=")),
+        rw!("and-eq-eq"         ;  "( && ( == ?x ?c0 ) ( == ?x ?c1 ) )" => "0" if compare_c0_c1("?c1", "?c0", "!=")),
+        rw!("and-ineq-eq"       ;  "( && ( != ?x ?c0 ) ( == ?x ?c1 ) )" => "( == ?x ?c1 )" if compare_c0_c1("?c1", "?c0", "!=")),
         rw!("and-lt-to-min"     ;  "(&& (< ?x ?y) (< ?x ?z))"           => "(< ?x (min ?y ?z))"),
         rw!("and-min-to-lt"     ;  "(< ?x (min ?y ?z))"                 => "(&& (< ?x ?y) (< ?x ?z))"),
         rw!("and-eqlt-to-min"   ;  "(&& (<= ?x ?y) (<= ?x ?z))"         => "(<= ?x (min ?y ?z))"),
@@ -48,22 +56,22 @@ pub fn mk_rules() -> Box<[GeneralRule<CaviarAnalysis>]> {
         rw!("and-max-to-lt"     ;  "(> ?x (max ?y ?z))"                 => "(&& (< ?z ?x) (< ?y ?x))"),
         rw!("and-eqlt-to-max"   ;  "(&& (<= ?y ?x) (<= ?z ?x))"         => "(<= (max ?y ?z) ?x)"),
         rw!("and-max-to-eqlt"   ;  "(>= ?x (max ?y ?z))"                => "(&& (<= ?z ?x) (<= ?y ?x))"),
-        rw!("and-lt-gt-to-0"    ; "( && ( < ?c0 ?x ) ( < ?x ?c1 ) )"    => "0" if crate::trs::compare_c0_c1("?c1", "?c0", "<=+1")),
-        rw!("and-eqlt-eqgt-to-0"; "( && ( <= ?c0 ?x ) ( <= ?x ?c1 ) )"  => "0" if crate::trs::compare_c0_c1("?c1", "?c0", "<")),
-        rw!("and-eqlt-gt-to-0"  ; "( && ( <= ?c0 ?x ) ( < ?x ?c1 ) )"   => "0" if crate::trs::compare_c0_c1("?c1", "?c0", "<=")),
+        rw!("and-lt-gt-to-0"    ; "( && ( < ?c0 ?x ) ( < ?x ?c1 ) )"    => "0" if compare_c0_c1("?c1", "?c0", "<=+1")),
+        rw!("and-eqlt-eqgt-to-0"; "( && ( <= ?c0 ?x ) ( <= ?x ?c1 ) )"  => "0" if compare_c0_c1("?c1", "?c0", "<")),
+        rw!("and-eqlt-gt-to-0"  ; "( && ( <= ?c0 ?x ) ( < ?x ?c1 ) )"   => "0" if compare_c0_c1("?c1", "?c0", "<=")),
 
         //DIV RULES
         rw!("div-zero"      ; "(/ 0 ?x)"            => "(0)"),
-        rw!("div-cancel"    ; "(/ ?a ?a)"           => "1" if crate::trs::is_not_zero("?a")),
+        rw!("div-cancel"    ; "(/ ?a ?a)"           => "1" if is_not_zero("?a")),
         rw!("div-minus-down"; "(/ (* -1 ?a) ?b)"    => "(/ ?a (* -1 ?b))"),
         rw!("div-minus-up"  ; "(/ ?a (* -1 ?b))"    => "(/ (* -1 ?a) ?b)"),
         rw!("div-minus-in"  ; "(* -1 (/ ?a ?b))"    => "(/ (* -1 ?a) ?b)"),
         rw!("div-minus-out" ; "(/ (* -1 ?a) ?b)"    => "(* -1 (/ ?a ?b))"),
         //FOLD
-        rw!("div-consts-div"; "( / ( * ?x ?a ) ?b )" => "( / ?x ( / ?b ?a ) )" if crate::trs::compare_c0_c1("?b", "?a", "%0<")),
-        rw!("div-consts-mul"; "( / ( * ?x ?a ) ?b )" => "( * ?x ( / ?a ?b ) )" if crate::trs::compare_c0_c1("?a", "?b", "%0<")),
-        rw!("div-consts-add"; "( / ( + ( * ?x ?a ) ?y ) ?b )" => "( + ( * ?x ( / ?a ?b ) ) ( / ?y ?b ) )" if crate::trs::compare_c0_c1("?a", "?b", "%0<")),
-        rw!("div-separate"  ; "( / ( + ?x ?a ) ?b )" => "( + ( / ?x ?b ) ( / ?a ?b ) )" if crate::trs::compare_c0_c1("?a", "?b", "%0<")),
+        rw!("div-consts-div"; "( / ( * ?x ?a ) ?b )" => "( / ?x ( / ?b ?a ) )" if compare_c0_c1("?b", "?a", "%0<")),
+        rw!("div-consts-mul"; "( / ( * ?x ?a ) ?b )" => "( * ?x ( / ?a ?b ) )" if compare_c0_c1("?a", "?b", "%0<")),
+        rw!("div-consts-add"; "( / ( + ( * ?x ?a ) ?y ) ?b )" => "( + ( * ?x ( / ?a ?b ) ) ( / ?y ?b ) )" if compare_c0_c1("?a", "?b", "%0<")),
+        rw!("div-separate"  ; "( / ( + ?x ?a ) ?b )" => "( + ( / ?x ?b ) ( / ?a ?b ) )" if compare_c0_c1("?a", "?b", "%0<")),
 
 
         // Equality RULES
@@ -75,11 +83,11 @@ pub fn mk_rules() -> Box<[GeneralRule<CaviarAnalysis>]> {
         rw!("eq-max-lt"     ; "( == (max ?x ?y) ?y)" => "(<= ?x ?y)"),
         rw!("Eq-min-lt"     ; "( == (min ?x ?y) ?y)" => "(<= ?y ?x)"),
         rw!("Eq-lt-min"     ; "(<= ?y ?x)"           => "( == (min ?x ?y) ?y)"),
-        rw!("Eq-a-b"        ; "(== (* ?a ?x) ?b)"    => "0" if crate::trs::compare_c0_c1("?b", "?a", "!%0")),
-        rw!("Eq-max-c-pos"  ; "(== (max ?x ?c) 0)"   => "0" if crate::trs::is_const_pos("?c")),
-        rw!("Eq-max-c-neg"  ; "(== (max ?x ?c) 0)"   => "(== ?x 0)" if crate::trs::is_const_neg("?c")),
-        rw!("Eq-min-c-pos"  ; "(== (min ?x ?c) 0)"   => "0" if crate::trs::is_const_neg("?c")),
-        rw!("Eq-min-c-neg"  ; "(== (min ?x ?c) 0)"   => "(== ?x 0)" if crate::trs::is_const_pos("?c")),
+        rw!("Eq-a-b"        ; "(== (* ?a ?x) ?b)"    => "0" if compare_c0_c1("?b", "?a", "!%0")),
+        rw!("Eq-max-c-pos"  ; "(== (max ?x ?c) 0)"   => "0" if is_const_pos("?c")),
+        rw!("Eq-max-c-neg"  ; "(== (max ?x ?c) 0)"   => "(== ?x 0)" if is_const_neg("?c")),
+        rw!("Eq-min-c-pos"  ; "(== (min ?x ?c) 0)"   => "0" if is_const_neg("?c")),
+        rw!("Eq-min-c-neg"  ; "(== (min ?x ?c) 0)"   => "(== ?x 0)" if is_const_pos("?c")),
 
 
         // Inequality RULES
@@ -92,24 +100,24 @@ pub fn mk_rules() -> Box<[GeneralRule<CaviarAnalysis>]> {
         rw!("lt-to-zero"    ;  "(< ?a ?a)"              => "0"),
         rw!("lt-swap-in"    ;  "(< (+ ?x ?y) ?z)"       => "(< ?x (- ?z ?y))" ),
         rw!("lt-swap-out"   ;  "(< ?z (+ ?x ?y))"       => "(< (- ?z ?y) ?x)" ),
-        rw!("lt-x-x-sub-a"  ;  "(< (- ?a ?y) ?a )"      => "1" if crate::trs::is_const_pos("?y")),
-        rw!("lt-const-pos"  ;  "(< 0 ?y )"              => "1" if crate::trs::is_const_pos("?y")),
-        rw!("lt-const-neg"  ;  "(< ?y 0 )"              => "1" if crate::trs::is_const_neg("?y")),
+        rw!("lt-x-x-sub-a"  ;  "(< (- ?a ?y) ?a )"      => "1" if is_const_pos("?y")),
+        rw!("lt-const-pos"  ;  "(< 0 ?y )"              => "1" if is_const_pos("?y")),
+        rw!("lt-const-neg"  ;  "(< ?y 0 )"              => "1" if is_const_neg("?y")),
         rw!("min-lt-cancel" ;  "( < ( min ?x ?y ) ?x )" => "( < ?y ?x )"),
         rw!("lt-min-mutual-term"    ; "( < ( min ?z ?y ) ( min ?x ?y ) )"           => "( < ?z ( min ?x ?y ) )"),
         rw!("lt-max-mutual-term"    ; "( < ( max ?z ?y ) ( max ?x ?y ) )"           => "( < ( max ?z ?y ) ?x )"),
-        rw!("lt-min-term-term+pos"  ; "( < ( min ?z ?y ) ( min ?x ( + ?y ?c0 ) ) )" => "( < ( min ?z ?y ) ?x )" if crate::trs::is_const_pos("?c0")),
-        rw!("lt-max-term-term+pos"  ; "( < ( max ?z ( + ?y ?c0 ) ) ( max ?x ?y ) )" => "( < ( max ?z ( + ?y ?c0 ) ) ?x )" if crate::trs::is_const_pos("?c0")),
-        rw!("lt-min-term+neg-term"  ; "( < ( min ?z ( + ?y ?c0 ) ) ( min ?x ?y ) )" => "( < ( min ?z ( + ?y ?c0 ) ) ?x )" if crate::trs::is_const_neg("?c0")),
-        rw!("lt-max-term+neg-term"  ; "( < ( max ?z ?y ) ( max ?x ( + ?y ?c0 ) ) )" => "( < ( max ?z ?y ) ?x )" if crate::trs::is_const_neg("?c0")),
-        rw!("lt-min-term+cpos"      ; "( < ( min ?x ?y ) (+ ?x ?c0) )"              => "1" if crate::trs::is_const_pos("?c0")),
+        rw!("lt-min-term-term+pos"  ; "( < ( min ?z ?y ) ( min ?x ( + ?y ?c0 ) ) )" => "( < ( min ?z ?y ) ?x )" if is_const_pos("?c0")),
+        rw!("lt-max-term-term+pos"  ; "( < ( max ?z ( + ?y ?c0 ) ) ( max ?x ?y ) )" => "( < ( max ?z ( + ?y ?c0 ) ) ?x )" if is_const_pos("?c0")),
+        rw!("lt-min-term+neg-term"  ; "( < ( min ?z ( + ?y ?c0 ) ) ( min ?x ?y ) )" => "( < ( min ?z ( + ?y ?c0 ) ) ?x )" if is_const_neg("?c0")),
+        rw!("lt-max-term+neg-term"  ; "( < ( max ?z ?y ) ( max ?x ( + ?y ?c0 ) ) )" => "( < ( max ?z ?y ) ?x )" if is_const_neg("?c0")),
+        rw!("lt-min-term+cpos"      ; "( < ( min ?x ?y ) (+ ?x ?c0) )"              => "1" if is_const_pos("?c0")),
         rw!("lt-min-max-cancel"     ; "(< (max ?a ?c) (min ?a ?b))"                 => "0"),
-        // rw!("lt-mul-pos-cancel"     ; "(< (* ?x ?y) ?z)"                            => "(< ?x (/ ?z ?y))"  if crate::trs::is_const_pos("?y")),
-        // rw!("lt-mul-div-cancel"     ; "(< ?x (/ ?z ?y))"                            => "(< (* ?x ?y) ?z))"  if crate::trs::is_const_pos("?y")),
-        rw!("lt-mul-pos-cancel"     ; "(< (* ?x ?y) ?z)"                            => "(< ?x ( / (- ( + ?z ?y ) 1 ) ?y ) )"  if crate::trs::is_const_pos("?y")),
-        rw!("lt-mul-div-cancel"     ; "(< ?y (/ ?x ?z))"                            => "( < ( - ( * ( + ?y 1 ) ?z ) 1 ) ?x )"  if crate::trs::is_const_pos("?z")),
-        rw!("lt-const-mod"     ; "(< ?a (% ?x ?b))" => "1"  if crate::trs::compare_c0_c1("?a", "?b", "<=-a")),
-        rw!("lt-const-mod-false"     ; "(< ?a (% ?x ?b))" => "0"  if crate::trs::compare_c0_c1("?a", "?b", ">=a")),
+        // rw!("lt-mul-pos-cancel"     ; "(< (* ?x ?y) ?z)"                            => "(< ?x (/ ?z ?y))"  if is_const_pos("?y")),
+        // rw!("lt-mul-div-cancel"     ; "(< ?x (/ ?z ?y))"                            => "(< (* ?x ?y) ?z))"  if is_const_pos("?y")),
+        rw!("lt-mul-pos-cancel"     ; "(< (* ?x ?y) ?z)"                            => "(< ?x ( / (- ( + ?z ?y ) 1 ) ?y ) )"  if is_const_pos("?y")),
+        rw!("lt-mul-div-cancel"     ; "(< ?y (/ ?x ?z))"                            => "( < ( - ( * ( + ?y 1 ) ?z ) 1 ) ?x )"  if is_const_pos("?z")),
+        rw!("lt-const-mod"     ; "(< ?a (% ?x ?b))" => "1"  if compare_c0_c1("?a", "?b", "<=-a")),
+        rw!("lt-const-mod-false"     ; "(< ?a (% ?x ?b))" => "0"  if compare_c0_c1("?a", "?b", ">=a")),
 
 
         // MAX RULES
@@ -126,44 +134,44 @@ pub fn mk_rules() -> Box<[GeneralRule<CaviarAnalysis>]> {
         rw!("min-max-min-y" ; "(min (max (min ?x ?y) ?z) ?y)"       => "(min (max ?x ?z) ?y)"),
         rw!("min-sub-both"  ; "(min (+ ?a ?b) ?c)"                  => "(+ (min ?b (- ?c ?a)) ?a)"),
         rw!("min-add-both"  ; "(+ (min ?x ?y) ?z)"                  => "(min (+ ?x ?z) (+ ?y ?z))"),
-        rw!("min-x-x-plus-a-pos"; "(min ?x (+ ?x ?a))"               => "?x" if crate::trs::is_const_pos("?a") ),
-        rw!("min-x-x-plus-a-neg"; "(min ?x (+ ?x ?a))"               => "(+ ?x ?a)" if crate::trs::is_const_neg("?a") ),
-        rw!("min-mul-in-pos"    ; "(* (min ?x ?y) ?z)"               => "(min (* ?x ?z) (* ?y ?z))" if crate::trs::is_const_pos("?z")),
-        rw!("min-mul-out-pos"   ; "(min (* ?x ?z) (* ?y ?z))"        => "(* (min ?x ?y) ?z)"  if crate::trs::is_const_pos("?z")),
-        rw!("min-mul-in-neg"    ; "(* (min ?x ?y) ?z)"               => "(max (* ?x ?z) (* ?y ?z))" if crate::trs::is_const_neg("?z")),
-        rw!("min-mul-out-neg"   ; "(max (* ?x ?z) (* ?y ?z))"        => "(* (min ?x ?y) ?z)" if crate::trs::is_const_neg("?z")),
-        rw!("min-div-in-pos"    ; "(/ (min ?x ?y) ?z)"               => "(min (/ ?x ?z) (/ ?y ?z))" if crate::trs::is_const_pos("?z")),
-        rw!("min-div-out-pos"   ; "(min (/ ?x ?z) (/ ?y ?z))"        => "(/ (min ?x ?y) ?z)" if crate::trs::is_const_pos("?z")),
-        rw!("min-div-in-neg"    ; "(/ (max ?x ?y) ?z)"               => "(min (/ ?x ?z) (/ ?y ?z))"  if crate::trs::is_const_neg("?z")),
-        rw!("min-div-out-neg"   ; "(min (/ ?x ?z) (/ ?y ?z))"        => "(/ (max ?x ?y) ?z)" if crate::trs::is_const_neg("?z")),
-        rw!("min-max-const"     ; "( min ( max ?x ?c0 ) ?c1 )"       => "?c1" if crate::trs::compare_c0_c1("?c1","?c0","<=")),
-        rw!("min-div-mul"               ; "( min ( * ( / ?x ?c0 ) ?c0 ) ?x )"    => "( * ( / ?x ?c0 ) ?c0 )" if  crate::trs::is_const_pos("?c0")),
-        rw!("min-mod-const-to-mod"      ; "(min (% ?x ?c0) ?c1)"                         => "(% ?x ?c0)" if crate::trs::compare_c0_c1("?c1","?c0",">=a-1")),
-        rw!("min-mod-const-to-const"    ; "(min (% ?x ?c0) ?c1)" => "?c1" if crate::trs::compare_c0_c1("?c1","?c0","<=-a+1")), // c1 <= - |c0| + 1
-        rw!("min-max-switch"            ; "( min ( max ?x ?c0 ) ?c1 )" => "( max ( min ?x ?c1 ) ?c0 )" if crate::trs::compare_c0_c1("?c0","?c1","<=") ),
-        rw!("max-min-switch"            ; "( max ( min ?x ?c1 ) ?c0 )" => "( min ( max ?x ?c0 ) ?c1 )" if crate::trs::compare_c0_c1("?c0","?c1","<=") ),
+        rw!("min-x-x-plus-a-pos"; "(min ?x (+ ?x ?a))"               => "?x" if is_const_pos("?a") ),
+        rw!("min-x-x-plus-a-neg"; "(min ?x (+ ?x ?a))"               => "(+ ?x ?a)" if is_const_neg("?a") ),
+        rw!("min-mul-in-pos"    ; "(* (min ?x ?y) ?z)"               => "(min (* ?x ?z) (* ?y ?z))" if is_const_pos("?z")),
+        rw!("min-mul-out-pos"   ; "(min (* ?x ?z) (* ?y ?z))"        => "(* (min ?x ?y) ?z)"  if is_const_pos("?z")),
+        rw!("min-mul-in-neg"    ; "(* (min ?x ?y) ?z)"               => "(max (* ?x ?z) (* ?y ?z))" if is_const_neg("?z")),
+        rw!("min-mul-out-neg"   ; "(max (* ?x ?z) (* ?y ?z))"        => "(* (min ?x ?y) ?z)" if is_const_neg("?z")),
+        rw!("min-div-in-pos"    ; "(/ (min ?x ?y) ?z)"               => "(min (/ ?x ?z) (/ ?y ?z))" if is_const_pos("?z")),
+        rw!("min-div-out-pos"   ; "(min (/ ?x ?z) (/ ?y ?z))"        => "(/ (min ?x ?y) ?z)" if is_const_pos("?z")),
+        rw!("min-div-in-neg"    ; "(/ (max ?x ?y) ?z)"               => "(min (/ ?x ?z) (/ ?y ?z))"  if is_const_neg("?z")),
+        rw!("min-div-out-neg"   ; "(min (/ ?x ?z) (/ ?y ?z))"        => "(/ (max ?x ?y) ?z)" if is_const_neg("?z")),
+        rw!("min-max-const"     ; "( min ( max ?x ?c0 ) ?c1 )"       => "?c1" if compare_c0_c1("?c1","?c0","<=")),
+        rw!("min-div-mul"               ; "( min ( * ( / ?x ?c0 ) ?c0 ) ?x )"    => "( * ( / ?x ?c0 ) ?c0 )" if  is_const_pos("?c0")),
+        rw!("min-mod-const-to-mod"      ; "(min (% ?x ?c0) ?c1)"                         => "(% ?x ?c0)" if compare_c0_c1("?c1","?c0",">=a-1")),
+        rw!("min-mod-const-to-const"    ; "(min (% ?x ?c0) ?c1)" => "?c1" if compare_c0_c1("?c1","?c0","<=-a+1")), // c1 <= - |c0| + 1
+        rw!("min-max-switch"            ; "( min ( max ?x ?c0 ) ?c1 )" => "( max ( min ?x ?c1 ) ?c0 )" if compare_c0_c1("?c0","?c1","<=") ),
+        rw!("max-min-switch"            ; "( max ( min ?x ?c1 ) ?c0 )" => "( min ( max ?x ?c0 ) ?c1 )" if compare_c0_c1("?c0","?c1","<=") ),
         //FOLD
         rw!("min-consts-or"          ; "( < ( min ?y ?c0 ) ?c1 )" => "( || ( < ?y ?c1 ) ( < ?c0 ?c1 ) )"),
         rw!("max-consts-and"         ; "( < ( max ?y ?c0 ) ?c1 )" => "( && ( < ?y ?c1 ) ( < ?c0 ?c1 ) )"),
         rw!("max-consts-or"          ; "( < ?c1 ( max ?y ?c0 ) )" => "( || ( < ?c1 ?y ) ( < ?c1 ?c0 ) )"),
-        rw!("min-consts-div-pos"     ; "( min ( * ?x ?a ) ?b )" => "( * ( min ?x ( / ?b ?a ) ) ?a )" if crate::trs::compare_c0_c1("?b", "?a", "%0<") ), // b%a==0 && 0<b        
-        rw!("min-min-div-pos"        ; "( min ( * ?x ?a ) ( * ?y ?b ) )" => "( * ( min ?x ( * ?y ( / ?b ?a ) ) ) ?a )" if crate::trs::compare_c0_c1("?b", "?a", "%0<") ),  
-        rw!("min-consts-div-neg"     ; "( min ( * ?x ?a ) ?b )" => "( * ( max ?x ( / ?b ?a ) ) ?a )" if crate::trs::compare_c0_c1("?b", "?a", "%0>") ),  
-        rw!("min-min-div-neg"        ; "( min ( * ?x ?a ) ( * ?y ?b ) )" => "( * ( max ?x ( * ?y ( / ?b ?a ) ) ) ?a )" if crate::trs::compare_c0_c1("?b", "?a", "%0>") ), 
+        rw!("min-consts-div-pos"     ; "( min ( * ?x ?a ) ?b )" => "( * ( min ?x ( / ?b ?a ) ) ?a )" if compare_c0_c1("?b", "?a", "%0<") ), // b%a==0 && 0<b        
+        rw!("min-min-div-pos"        ; "( min ( * ?x ?a ) ( * ?y ?b ) )" => "( * ( min ?x ( * ?y ( / ?b ?a ) ) ) ?a )" if compare_c0_c1("?b", "?a", "%0<") ),  
+        rw!("min-consts-div-neg"     ; "( min ( * ?x ?a ) ?b )" => "( * ( max ?x ( / ?b ?a ) ) ?a )" if compare_c0_c1("?b", "?a", "%0>") ),  
+        rw!("min-min-div-neg"        ; "( min ( * ?x ?a ) ( * ?y ?b ) )" => "( * ( max ?x ( * ?y ( / ?b ?a ) ) ) ?a )" if compare_c0_c1("?b", "?a", "%0>") ), 
 
 
         //MOD RULES
         rw!("mod-zero"      ; "(% 0 ?x)"             => "0"),
         rw!("mod-x-x"       ; "(% ?x ?x)"            => "0"),
         rw!("mod-one"       ; "(% ?x 1)"             => "0"),
-        rw!("mod-const-add" ; "(% ?x ?c1)"           => "(% (+ ?x ?c1) ?c1)" if crate::trs::compare_c0_c1("?c1","?x","<=a")),
-        rw!("mod-const-sub" ; "(% ?x ?c1)"           => "(% (- ?x ?c1) ?c1)" if crate::trs::compare_c0_c1("?c1","?x","<=a")),
+        rw!("mod-const-add" ; "(% ?x ?c1)"           => "(% (+ ?x ?c1) ?c1)" if compare_c0_c1("?c1","?x","<=a")),
+        rw!("mod-const-sub" ; "(% ?x ?c1)"           => "(% (- ?x ?c1) ?c1)" if compare_c0_c1("?c1","?x","<=a")),
         rw!("mod-minus-out" ; "(% (* ?x -1) ?c)"     => "(* -1 (% ?x ?c))"),
         rw!("mod-minus-in"  ; "(* -1 (% ?x ?c))"     => "(% (* ?x -1) ?c)"),
         rw!("mod-two"       ; "(% (- ?x ?y) 2)"      => "(% (+ ?x ?y) 2)"),
         //FOLD
-        rw!("mod-consts"    ; "( % ( + ( * ?x ?c0 ) ?y ) ?c1 )" => "( % ?y ?c1 )" if crate::trs::compare_c0_c1("?c0", "?c1", "%0")),
-        rw!("mod-multiple";"(% (* ?c0 ?x) ?c1)" => "0" if crate::trs::compare_c0_c1("?c0", "?c1", "%0")),
+        rw!("mod-consts"    ; "( % ( + ( * ?x ?c0 ) ?y ) ?c1 )" => "( % ?y ?c1 )" if compare_c0_c1("?c0", "?c1", "%0")),
+        rw!("mod-multiple";"(% (* ?c0 ?x) ?c1)" => "0" if compare_c0_c1("?c0", "?c1", "%0")),
 
 
         //MUL RULES
@@ -191,6 +199,11 @@ pub fn mk_rules() -> Box<[GeneralRule<CaviarAnalysis>]> {
         // rw!("add-to-sub"; "(+ ?a ?b)"   => "(- ?a (* -1 ?b))"),
     ])
 }
+
+fn compare_c0_c1<N: Analysis>(s1: &str, s2: &str, s3: &str) -> impl Fn(&(N::G, Id), &Subst<N>, &EGraph<N>) -> bool { |gid, subst, eg| todo!() }
+fn is_not_zero<N: Analysis>(s: &str) -> impl Fn(&(N::G, Id), &Subst<N>, &EGraph<N>) -> bool { |gid, subst, eg| todo!() }
+fn is_const_pos<N: Analysis>(s: &str) -> impl Fn(&(N::G, Id), &Subst<N>, &EGraph<N>) -> bool { |gid, subst, eg| todo!() }
+fn is_const_neg<N: Analysis>(s: &str) -> impl Fn(&(N::G, Id), &Subst<N>, &EGraph<N>) -> bool { |gid, subst, eg| todo!() }
 
 #[test]
 fn rules_parse() {
