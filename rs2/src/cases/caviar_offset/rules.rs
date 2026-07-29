@@ -1,7 +1,5 @@
 use super::*;
 
-type Rules = [(Pat, Pat)];
-
 macro_rules! rw {
     (
         $name:expr;
@@ -9,13 +7,13 @@ macro_rules! rw {
         $(if $cond:expr)*
     ) => {{
         let searcher = parse($lhs);
-        let applier = parse($rhs);
+        let applier = pattern_applier(parse($rhs));
         // TODO handle if conditions & add name.
         (searcher, applier)
     }};
 }
 
-pub fn mk_rules() -> Box<Rules> {
+pub fn mk_rules() -> Box<[GeneralRule<OffsetAnalysis>]> {
     Box::new([
         // ADD RULES
         rw!("add-comm"      ; "(+ ?a ?b)"                   => "(+ ?b ?a)"),

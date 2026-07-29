@@ -100,7 +100,7 @@ pub fn run_caviar() {
     for (l, r) in parse_expressions("caviar-expressions.json") {
         let mut eg = EGraph::new();
         add_expr(&l, &mut eg);
-        eqsat::<OffsetAnalysis, OffsetMatcher>(&mut eg, &*rules, 3);
+        general_eqsat::<OffsetAnalysis, OffsetMatcher>(&mut eg, &*rules, 3);
 
         if let (Some(ll), Some(rr)) = (eg.lookup_term(&l), eg.lookup_term(&r)) && eg.is_equal(ll, rr) {
             println!("proof found!");
