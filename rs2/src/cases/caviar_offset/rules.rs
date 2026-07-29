@@ -200,8 +200,34 @@ pub fn mk_rules() -> Box<[GeneralRule<CaviarAnalysis>]> {
     ])
 }
 
-// TODO impl
-fn compare_c0_c1(s1: &str, s2: &str, s3: &str) -> impl Fn(&(Offset, Id), &Subst<CaviarAnalysis>, &EGraph<CaviarAnalysis>) -> bool { |gid, subst, eg| false }
+fn compare_c0_c1(var: &str, var1: &str, comp: &str) -> impl Fn(&(Offset, Id), &Subst<CaviarAnalysis>, &EGraph<CaviarAnalysis>) -> bool {
+    let var = Symbol::new(var);
+    let var1 = Symbol::new(var1);
+    move |gid, subst, eg| {
+        let Some(c1) = eg.get_semilattice(&subst[&var1]) else { return false };
+        let Some(c) = eg.get_semilattice(&subst[&var]) else { return false };
+        match comp {
+            "<" => c < c1,
+            "<a" => c < c1.abs(),
+            "<=" => c <= c1,
+            "<=+1" => c <= c1 + 1,
+            "<=a" => c <= c1.abs(),
+            "<=-a" => c <= -c1.abs(),
+            "<=-a+1" => c <= 1 - c1.abs(),
+            ">" => c > c1,
+            ">a" => c > c1.abs(),
+            ">=" => c >= c1,
+            ">=a" => c >= c1.abs(),
+            ">=a-1" => c >= c1.abs() - 1,
+            "!=" => c != c1,
+            "%0" => (c1 != 0) && (c % c1 == 0),
+            "!%0" => (c1 != 0) && (c % c1 != 0),
+            "%0<" => (c1 > 0) && (c % c1 == 0),
+            "%0>" => (c1 < 0) && (c % c1 == 0),
+            _ => false,
+        }
+    }
+}
 
 fn is_not_zero(s: &str) -> impl Fn(&(Offset, Id), &Subst<CaviarAnalysis>, &EGraph<CaviarAnalysis>) -> bool {
     let s = Symbol::from(s);
