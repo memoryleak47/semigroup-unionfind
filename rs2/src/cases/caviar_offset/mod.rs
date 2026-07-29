@@ -94,3 +94,7 @@ pub enum CaviarLang {
     Constant(i64),
     Symbol(Symbol),
 }
+
+pub fn run_caviar() {
+    dbg!(parse_expressions("caviar-expressions.json"));
+}

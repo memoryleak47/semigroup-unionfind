@@ -26,4 +26,6 @@ pub use eqsat::*;
 // Examples:
 mod cases;
 
-fn main() {}
+fn main() {
+    cases::caviar_offset::run_caviar();
+}
