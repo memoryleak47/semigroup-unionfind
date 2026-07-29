@@ -53,7 +53,10 @@ impl Analysis for OffsetAnalysis {
             Add([x, y]) => get(x)? + get(y)?,
             Sub([x, y]) => get(x)? - get(y)?,
             Mul([x, y]) => get(x)? * get(y)?,
-            Div([x, y]) => get(x)? / get(y)?,
+            Div([x, y]) => {
+                let yy = get(y)?;
+                if yy != 0 { get(x)? / yy } else { return None }
+            },
             Mod([x, y]) => get(x)? % get(y)?,
             Max([x, y]) => get(x)?.max(get(y)?),
             Min([x, y]) => get(x)?.min(get(y)?),
