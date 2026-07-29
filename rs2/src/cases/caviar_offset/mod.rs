@@ -63,7 +63,7 @@ impl Semilattice for Option<i64> {
     }
 
     fn insert_self_edge(&mut self, g: Self::G) {
-        assert!(g == Offset(0));
+        assert_eq!(g, Offset(0));
     }
 
     fn contains_self_edge(&self, g: &Self::G) -> bool {
@@ -98,9 +98,14 @@ pub enum CaviarLang {
 pub fn run_caviar() {
     let rules = mk_rules();
     for (l, r) in parse_expressions("caviar-expressions.json") {
-        dbg!(&l);
         let mut eg = EGraph::new();
         add_expr(&l, &mut eg);
-        eqsat::<OffsetAnalysis, OffsetMatcher>(&mut eg, &*rules, 10);
+        eqsat::<OffsetAnalysis, OffsetMatcher>(&mut eg, &*rules, 3);
+
+        if let (Some(ll), Some(rr)) = (eg.lookup_term(&l), eg.lookup_term(&r)) && eg.is_equal(ll, rr) {
+            println!("proof found!");
+        } else {
+            println!("proof NOT found!");
+        }
     }
 }
