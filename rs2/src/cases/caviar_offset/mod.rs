@@ -96,5 +96,10 @@ pub enum CaviarLang {
 }
 
 pub fn run_caviar() {
-    dbg!(parse_expressions("caviar-expressions.json"));
+    let rules = mk_rules();
+    for (l, r) in parse_expressions("caviar-expressions.json") {
+        let mut eg = EGraph::new();
+        add_expr(&l, &mut eg);
+        eqsat::<OffsetAnalysis, OffsetMatcher>(&mut eg, &*rules, 10);
+    }
 }

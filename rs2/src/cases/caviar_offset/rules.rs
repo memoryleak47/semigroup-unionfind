@@ -1,6 +1,6 @@
 use super::*;
 
-type Rules = [(Symbol, Pat, Pat)];
+type Rules = [(Pat, Pat)];
 
 macro_rules! rw {
     (
@@ -10,8 +10,8 @@ macro_rules! rw {
     ) => {{
         let searcher = parse($lhs);
         let applier = parse($rhs);
-        // TODO handle if conditions.
-        (Symbol::new($name), searcher, applier)
+        // TODO handle if conditions & add name.
+        (searcher, applier)
     }};
 }
 
