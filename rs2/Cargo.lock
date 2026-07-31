@@ -44,6 +44,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "hashbrown"
+version = "0.17.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
+
+[[package]]
+name = "indexmap"
+version = "2.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
+dependencies = [
+ "equivalent",
+ "hashbrown 0.17.1",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -95,6 +111,7 @@ dependencies = [
 name = "rs2"
 version = "0.1.0"
 dependencies = [
+ "indexmap",
  "ordered-float",
  "serde",
  "serde_json",
@@ -159,7 +176,7 @@ checksum = "aabf1e4bbb0a27b4b9bf61d9f634f6ef9d897bc139454b111e1f0cd4bfbe5641"
 dependencies = [
  "crossbeam-utils",
  "foldhash",
- "hashbrown",
+ "hashbrown 0.15.5",
 ]
 
 [[package]]

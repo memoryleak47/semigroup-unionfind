@@ -1,8 +1,13 @@
 use crate::*;
+use indexmap::IndexMap;
 
 pub struct EGraph<N: Analysis> {
-    pub hashcons: HashMap<N::L, (N::G, Id)>,
+    pub hashcons: IndexMap<N::L, (N::G, Id)>,
     pub uf: Unionfind<N::S>,
+
+    // Should this even be part of the e-graph, or just be constructed right before matching?
+    // After all, "add" doesn't respect it so far.
+    pub nodes: HashMap<Id, Vec<usize>>,
 }
 
 impl<N: Analysis> EGraph<N> {
@@ -10,6 +15,7 @@ impl<N: Analysis> EGraph<N> {
         EGraph {
             hashcons: Default::default(),
             uf: Unionfind::new(),
+            nodes: Default::default(),
         }
     }
 
@@ -108,6 +114,14 @@ impl<N: Analysis> EGraph<N> {
             }
             if !dirty { break }
         }
+        self.rebuild_nodes();
+    }
+
+    pub fn rebuild_nodes(&mut self) {
+        self.nodes.clear();
+        for (i, (_node, (_g, id))) in self.hashcons.iter().enumerate() {
+            self.nodes.entry(*id).or_default().push(i);
+        }
     }
 
     pub fn is_equal(&self, x: (N::G, Id), y: (N::G, Id)) -> bool {
@@ -130,12 +144,10 @@ impl<N: Analysis> EGraph<N> {
         // x has to be a leader.
         assert!(self.find((N::G::identity(), x)).1 == x);
 
-        let it1 = self.hashcons.iter().filter_map(|(n, (g, i))| {
-            if *i == x {
-                Some((g.inverse(), n.clone()))
-            } else { None }
+        let it1 = self.nodes.get(&x).into_iter().map(|x| x.iter()).flatten().map(|i| {
+            let (node, (g, _id)) = self.hashcons.get_index(*i).unwrap();
+            (g.inverse(), node.clone())
         });
-
         let it2 = N::implied_nodes(x, self).into_iter();
 
         it1.chain(it2).collect()
