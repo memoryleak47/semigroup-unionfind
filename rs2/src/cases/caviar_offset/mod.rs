@@ -116,11 +116,11 @@ pub fn run_caviar() {
         println!("iter {iter} done, size={}", eg.hashcons.len());
 
         if eg.is_equal(zero, i) {
-            println!("it's equal to 0");
+            println!("PROOF FOUND: it's equal to 0");
             break
         }
         if eg.is_equal(one, i) {
-            println!("it's equal to 1");
+            println!("PROOF FOUND: it's equal to 1");
             break
         }
     }
