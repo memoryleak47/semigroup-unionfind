@@ -2,7 +2,7 @@ use super::*;
 
 pub struct CaviarAnalysis;
 
-pub const ACTIVE: bool = false;
+pub const ACTIVE: bool = true;
 
 impl Analysis for CaviarAnalysis {
     type G = Offset;

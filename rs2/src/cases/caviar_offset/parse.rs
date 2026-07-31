@@ -73,28 +73,3 @@ pub fn parse(s: &str) -> Pat {
     let Parsed(x) = things.into_iter().next().unwrap() else { panic!() };
     x
 }
-
-use serde_json::Value;
-use std::fs::File;
-use std::io::BufReader;
-use std::error::Error;
-
-pub fn parse_expressions(filename: &str) -> Vec<(Pat, Pat)> {
-    let file = File::open(filename).unwrap();
-    let reader = BufReader::new(file);
-    let val: Value = serde_json::from_reader(reader).unwrap();
-
-    let mut out = Vec::new();
-    for x in val.as_array().unwrap() {
-        // TODO: use x["rules"] aswell.
-        let x = &x["expression"];
-        let start = x["start"].as_str().unwrap();
-        let end = x["end"].as_str().unwrap();
-
-        let start = parse(start);
-        let end = parse(end);
-
-        out.push((start, end));
-    }
-    out
-}

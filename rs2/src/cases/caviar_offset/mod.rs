@@ -1,4 +1,5 @@
 use crate::*;
+use std::time::Instant;
 
 mod matching;
 use matching::*;
@@ -97,18 +98,30 @@ pub enum CaviarLang {
 
 pub fn run_caviar() {
     let rules = mk_rules();
-    for (i, (l, r)) in parse_expressions("caviar-expressions.json").into_iter().enumerate().take(200) {
-        dbg!(i);
-        if i == 71 || i == 104 || i == 197 { println!("SKIP"); continue }
-        dbg!(&l);
-        let mut eg = EGraph::new();
-        add_expr(&l, &mut eg);
-        general_eqsat::<CaviarAnalysis, CaviarMatcher>(&mut eg, &*rules, 3);
 
-        if let (Some(ll), Some(rr)) = (eg.lookup_term(&l), eg.lookup_term(&r)) && eg.is_equal(ll, rr) {
-            println!("proof found!");
-        } else {
-            println!("proof NOT found!");
+    let arg = std::env::args().nth(1).unwrap();
+    let expr = parse(&arg);
+
+    let mut eg = EGraph::new();
+    let i = add_expr(&expr, &mut eg);
+
+    let one = add_expr(&parse("1"), &mut eg);
+    let zero = add_expr(&parse("0"), &mut eg);
+
+    let mut iter = 0;
+    loop {
+        general_eqsat::<CaviarAnalysis, CaviarMatcher>(&mut eg, &*rules, 1);
+        
+        iter += 1;
+        println!("iter {iter} done, size={}", eg.hashcons.len());
+
+        if eg.is_equal(zero, i) {
+            println!("it's equal to 0");
+            break
+        }
+        if eg.is_equal(one, i) {
+            println!("it's equal to 1");
+            break
         }
     }
 }

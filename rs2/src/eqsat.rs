@@ -25,6 +25,7 @@ pub fn cond_pattern_applier<N: Analysis + 'static>(rhs_pat: Pattern<N>, cond: im
 pub type Term<N: Analysis> = Pattern<N>;
 
 pub fn eqsat<N: Analysis, M: Matcher<N>>(eg: &mut EGraph<N>, rules: &[Rule<N>], n: usize) {
+    eg.rebuild();
     for _ in 0..n {
         let mut matches = Vec::new();
         for (lhs, _) in rules.iter() {
@@ -43,6 +44,7 @@ pub fn eqsat<N: Analysis, M: Matcher<N>>(eg: &mut EGraph<N>, rules: &[Rule<N>], 
 }
 
 pub fn general_eqsat<N: Analysis, M: Matcher<N>>(eg: &mut EGraph<N>, rules: &[GeneralRule<N>], n: usize) {
+    eg.rebuild();
     for _ in 0..n {
         let mut matches = Vec::new();
         for (lhs, _) in rules.iter() {
