@@ -2,6 +2,7 @@ use crate::*;
 use std::time::Instant;
 use std::fs::OpenOptions;
 use std::io::Write;
+use std::fmt::Display;
 
 mod matching;
 use matching::*;
@@ -103,7 +104,7 @@ pub fn run_caviar() {
 
     let arg = std::env::args().nth(1).unwrap();
 
-    note(&format!("#START: \"{arg}\""));
+    note(format_args!("#START: \"{arg}\""));
 
     let expr = parse(&arg);
 
@@ -127,13 +128,13 @@ pub fn run_caviar() {
 
         let time = start.elapsed().as_secs_f64();
         let total_size = eg.hashcons.len();
-        note(&format!("#ENTRY: costs=[], total_size={total_size}, time={time}, iteration={iter}, stop={stop:?}"));
+        note(format_args!("#ENTRY: costs=[], total_size={total_size}, time={time}, iteration={iter}, stop={stop:?}"));
 
         if stop.is_some() { break }
     }
 }
 
-fn note(x: &str) {
+fn note(x: impl Display) {
     let act = if *ACTIVE { "active" } else { "passive" };
     let filename = format!("benchdata/entries-{act}.txt");
     let mut file = OpenOptions::new()
