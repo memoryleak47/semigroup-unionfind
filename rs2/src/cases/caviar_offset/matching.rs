@@ -47,7 +47,7 @@ impl Matcher<CaviarAnalysis> for CaviarMatcher {
     }
 
     fn expand(node: &CaviarLang, mut fresh_gvar: impl FnMut() -> GVar) -> (/*up*/Self::SymG, /*children*/Box<[Self::SymG]>) {
-        if let CaviarLang::Add(_) = node && ACTIVE {
+        if let CaviarLang::Add(_) = node && *ACTIVE {
             let o1 = CaviarMatcher::from_gvar(fresh_gvar());
             let o2 = CaviarMatcher::from_gvar(fresh_gvar());
             (CaviarMatcher::compose(&o1, &o2), Box::new([CaviarMatcher::inverse(&o1), CaviarMatcher::inverse(&o2)]))

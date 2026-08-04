@@ -2,7 +2,20 @@ use super::*;
 
 pub struct CaviarAnalysis;
 
-pub const ACTIVE: bool = false;
+use std::env;
+use std::sync::LazyLock;
+
+pub static ACTIVE: LazyLock<bool> = LazyLock::new(|| {
+    let val = match env::var("ACTIVE").ok().as_deref() {
+        Some("active") => true,
+        Some("passive") => false,
+        d => panic!("invalid ACTIVE value: {d:?}"),
+    };
+
+    println!("ACTIVE = {val}");
+
+    val
+});
 
 impl Analysis for CaviarAnalysis {
     type G = Offset;
@@ -11,7 +24,7 @@ impl Analysis for CaviarAnalysis {
 
     fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Either<Self::L, Id>) {
         use CaviarLang::*;
-        if !ACTIVE {
+        if !*ACTIVE {
             let mut n = n.clone();
             for ch in CaviarAnalysis::children_mut(&mut n) {
                 *ch = uf.find(*ch);
@@ -86,7 +99,7 @@ impl Analysis for CaviarAnalysis {
     }
 
     fn implied_nodes(x: Id, eg: &EGraph<Self>) -> Box<[(Self::G, Self::L)]> {
-        if !ACTIVE { return Box::new([]) }
+        if !*ACTIVE { return Box::new([]) }
 
         let Some(zero) = eg.lookup(&CaviarLang::Constant(0)) else { return Box::new([]) };
         let x = (Offset(0), x);

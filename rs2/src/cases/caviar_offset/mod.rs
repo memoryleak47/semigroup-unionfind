@@ -1,5 +1,7 @@
 use crate::*;
 use std::time::Instant;
+use std::fs::OpenOptions;
+use std::io::Write;
 
 mod matching;
 use matching::*;
@@ -100,6 +102,9 @@ pub fn run_caviar() {
     let rules = mk_rules();
 
     let arg = std::env::args().nth(1).unwrap();
+
+    note(&format!("#START: \"{arg}\""));
+
     let expr = parse(&arg);
 
     let mut eg = EGraph::new();
@@ -108,20 +113,34 @@ pub fn run_caviar() {
     let one = add_expr(&parse("1"), &mut eg);
     let zero = add_expr(&parse("0"), &mut eg);
 
+    let mut start = Instant::now();
+
     let mut iter = 0;
     loop {
         general_eqsat::<CaviarAnalysis, CaviarMatcher>(&mut eg, &*rules, 1);
         
         iter += 1;
-        println!("iter {iter} done, size={}", eg.hashcons.len());
 
-        if eg.is_equal(zero, i) {
-            println!("PROOF FOUND: it's equal to 0");
-            break
-        }
-        if eg.is_equal(one, i) {
-            println!("PROOF FOUND: it's equal to 1");
-            break
-        }
+        let mut stop = None;
+        if eg.is_equal(zero, i) { stop = Some("PROOF FOUND: it's equal to 0"); }
+        if eg.is_equal(one, i) { stop = Some("PROOF FOUND: it's equal to 1"); }
+
+        let time = start.elapsed().as_secs_f64();
+        let total_size = eg.hashcons.len();
+        note(&format!("#ENTRY: costs=[], total_size={total_size}, time={time}, iteration={iter}, stop={stop:?}"));
+
+        if stop.is_some() { break }
     }
+}
+
+fn note(x: &str) {
+    let act = if *ACTIVE { "active" } else { "passive" };
+    let filename = format!("benchdata/entries-{act}.txt");
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&filename)
+        .unwrap();
+
+    writeln!(file, "{x}").unwrap();
 }
