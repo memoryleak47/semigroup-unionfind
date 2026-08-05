@@ -254,5 +254,5 @@ fn is_const_neg(s: &str) -> impl Fn(&(Offset, Id), &Subst<CaviarAnalysis>, &EGra
 
 #[test]
 fn rules_parse() {
-    dbg!(mk_rules());
+    mk_rules();
 }
