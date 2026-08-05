@@ -41,14 +41,14 @@ def get_entry_file(act):
     return out
 
 def parse_entry(entry):
-    total_size = parse_num(entry.split("total_size=")[1].split(",")[0])
+    size = parse_num(entry.split("total_size=")[1].split(",")[0])
     time = parse_num(entry.split("time=")[1].split(",")[0])
     iteration = parse_num(entry.split("iteration=")[1].split(",")[0])
     stop = entry.split("stop=")[1].strip()
 
     return {
         "costs": [],
-        "total_size": total_size,
+        "size": size,
         "time": time,
         "iteration": iteration,
         "stop": stop,
@@ -60,16 +60,17 @@ for act in ["active", "passive"]:
 
 assert(len(db["active"]) == len(db["passive"]))
 
-def solve_time(entries):
+def solve_time(entries, res="time"):
     for e in entries:
         if "PROOF FOUND" in e["stop"]:
-            return e["time"]
+            return e[res]
 
-def cactus():
+def cactus(res):
+    # res = "time" or "size"
     def get_solveds(act):
         out = []
         for entries in db[act]:
-            s = solve_time(entries)
+            s = solve_time(entries, res)
             if s:
                 out.append(s)
         return sorted(out)
@@ -87,7 +88,7 @@ def cactus():
     plt.plot(range(1, len(passive_sorted) + 1), passive_sorted, color='red', marker='o', drawstyle='steps-post', label='Passive')
 
     plt.xlabel('Number of Solved Instances')
-    plt.ylabel('Time (seconds)')
+    plt.ylabel(res)
     plt.title('Cactus Plot Comparison')
     plt.yscale('log')
     plt.grid(True, which='both', linestyle='--', alpha=0.5)
@@ -109,4 +110,4 @@ def cmp():
 
     print(f"Active solved {actr} many alone, whereas passive solved {pctr} many alone")
 
-cmp()
+cactus("time")
