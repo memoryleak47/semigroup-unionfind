@@ -65,32 +65,48 @@ def solve_time(entries):
         if "PROOF FOUND" in e["stop"]:
             return e["time"]
 
-def get_solveds(act):
-    out = []
-    for entries in db[act]:
-        s = solve_time(entries)
-        if s:
-            out.append(s)
-    return sorted(out)
+def cactus():
+    def get_solveds(act):
+        out = []
+        for entries in db[act]:
+            s = solve_time(entries)
+            if s:
+                out.append(s)
+        return sorted(out)
 
-out_active = get_solveds("active")
-out_passive = get_solveds("passive")
+    out_active = get_solveds("active")
+    out_passive = get_solveds("passive")
 
-active_sorted = sorted(out_active)
-passive_sorted = sorted(out_passive)
+    active_sorted = sorted(out_active)
+    passive_sorted = sorted(out_passive)
 
-plt.figure(figsize=(8, 5))
+    plt.figure(figsize=(8, 5))
 
-# Plot active (blue) and passive (red)
-plt.plot(range(1, len(active_sorted) + 1), active_sorted, color='blue', marker='o', drawstyle='steps-post', label='Active')
-plt.plot(range(1, len(passive_sorted) + 1), passive_sorted, color='red', marker='o', drawstyle='steps-post', label='Passive')
+    # Plot active (blue) and passive (red)
+    plt.plot(range(1, len(active_sorted) + 1), active_sorted, color='blue', marker='o', drawstyle='steps-post', label='Active')
+    plt.plot(range(1, len(passive_sorted) + 1), passive_sorted, color='red', marker='o', drawstyle='steps-post', label='Passive')
 
-plt.xlabel('Number of Solved Instances')
-plt.ylabel('Time (seconds)')
-plt.title('Cactus Plot Comparison')
-plt.yscale('log')
-plt.grid(True, which='both', linestyle='--', alpha=0.5)
-plt.legend()
-plt.tight_layout()
+    plt.xlabel('Number of Solved Instances')
+    plt.ylabel('Time (seconds)')
+    plt.title('Cactus Plot Comparison')
+    plt.yscale('log')
+    plt.grid(True, which='both', linestyle='--', alpha=0.5)
+    plt.legend()
+    plt.tight_layout()
 
-plt.show()
+    plt.show()
+
+def cmp():
+    actr = 0
+    pctr = 0
+    for a, p in zip(db["active"], db["passive"]):
+        assert((len(a) == 0) == (len(p) == 0))
+        if len(a) == 0: continue
+        a = "PROOF FOUND" in a[-1]["stop"]
+        p = "PROOF FOUND" in p[-1]["stop"]
+        if a and not p: actr += 1
+        if p and not a: pctr += 1
+
+    print(f"Active solved {actr} many alone, whereas passive solved {pctr} many alone")
+
+cmp()
