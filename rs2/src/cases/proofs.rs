@@ -220,7 +220,7 @@ fn eqsat_test(t1: Term<ProofAnalysis>, t2: Term<ProofAnalysis>, rules: &Rules, n
     let x1 = add_expr(&t1, eg);
     let x2 = add_expr(&t2, eg);
 
-    eqsat::<_, ProofMatcher>(eg, &rules, n);
+    eqsat::<_, ProofMatcher>(eg, &rules, Box::new([]), Duration::MAX, usize::MAX, n);
     let p = eg.get_g_between(x1.clone(), x2.clone()).unwrap();
 
     dbg!(eg.hashcons.len());

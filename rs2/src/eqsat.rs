@@ -1,5 +1,7 @@
 use crate::*;
 
+pub use std::time::{Instant, Duration};
+
 pub type Rule<N: Analysis> = (Pattern<N>, Applier<N>);
 pub type Applier<N: Analysis> = Box<dyn Fn((N::G, Id), Subst<N>, &mut EGraph<N>)>;
 
@@ -22,12 +24,36 @@ pub fn cond_pattern_applier<N: Analysis + 'static>(rhs_pat: Pattern<N>, cond: im
 // Terms are just patterns that don't contain PVars.
 pub type Term<N: Analysis> = Pattern<N>;
 
-pub fn eqsat<N: Analysis, M: Matcher<N>>(eg: &mut EGraph<N>, rules: &[Rule<N>], n: usize) {
+pub enum StopReason {
+    NodeLimit,
+    TimeLimit,
+    IterLimit,
+    Other(String),
+}
+
+pub type Hook<N> = Box<dyn FnMut(&mut EGraph<N>) -> Result<(), StopReason>>;
+
+pub fn eqsat<N: Analysis, M: Matcher<N>>(eg: &mut EGraph<N>, rules: &[Rule<N>], mut hooks: Box<[Hook<N>]>, time_limit: Duration, node_limit: usize, iter_limit: usize) -> StopReason {
+    let mut start = Instant::now();
+
+    let check_limits = move |eg: &EGraph<N>| {
+        if eg.hashcons.len() > node_limit { return Err(StopReason::NodeLimit) }
+        if start.elapsed() > time_limit { return Err(StopReason::TimeLimit) }
+        Ok(())
+    };
+
     eg.rebuild();
-    for _ in 0..n {
+    for _ in 0..iter_limit {
+        if let Err(stop) = check_limits(eg) { return stop }
+
+        for h in hooks.iter_mut() {
+            if let Err(stop) = h(eg) { return stop }
+        }
+
         let mut matches = Vec::new();
         for (lhs, _) in rules.iter() {
             matches.push(ematch::<N, M>(lhs, eg));
+            if let Err(stop) = check_limits(eg) { return stop }
         }
 
         for (matches_inner, (lhs, applier)) in matches.into_iter().zip(rules) {
@@ -36,8 +62,11 @@ pub fn eqsat<N: Analysis, M: Matcher<N>>(eg: &mut EGraph<N>, rules: &[Rule<N>], 
                 applier(lhs_eclass, subst, eg);
             }
         }
+        if let Err(stop) = check_limits(eg) { return stop }
         eg.rebuild();
     }
+
+    StopReason::IterLimit
 }
 
 pub fn add_expr<N: Analysis>(t: &Term<N>, eg: &mut EGraph<N>) -> (N::G, Id) {
