@@ -21,7 +21,7 @@ macro_rules! rw {
     }};
 }
 
-pub fn mk_rules() -> Box<[GeneralRule<CaviarAnalysis>]> {
+pub fn mk_rules() -> Box<[Rule<CaviarAnalysis>]> {
     Box::new([
         // ADD RULES
         rw!("add-comm"      ; "(+ ?a ?b)"                   => "(+ ?b ?a)"),

@@ -206,11 +206,12 @@ fn zero() -> Pat {
 type Rules = [(Symbol, Pat, Pat)];
 
 fn eqsat_test(t1: Term<ProofAnalysis>, t2: Term<ProofAnalysis>, rules: &Rules, n: usize) {
-    let rules: Box<[(Pat, Pat)]> = rules.iter().map(|(rule_id, l, r)| {
+    let rules: Box<[Rule<ProofAnalysis>]> = rules.iter().map(|(rule_id, l, r)| {
         let annotation = Rc::new(ProofObj::Rule(*rule_id)).inverse();
 
         let l = l.clone();
         let r = Pattern::G(annotation, Box::new(r.clone()));
+        let r = pattern_applier(r);
 
         (l, r)
     }).collect();

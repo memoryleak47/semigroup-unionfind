@@ -118,7 +118,7 @@ pub fn run_caviar() {
 
     let mut iter = 0;
     loop {
-        general_eqsat::<CaviarAnalysis, CaviarMatcher>(&mut eg, &*rules, 1);
+        eqsat::<CaviarAnalysis, CaviarMatcher>(&mut eg, &*rules, 1);
         
         iter += 1;
 
