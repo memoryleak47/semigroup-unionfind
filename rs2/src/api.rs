@@ -1,6 +1,6 @@
 use crate::*;
 
-pub trait Group: Clone + Eq + Debug {
+pub trait Group: Clone + Eq + Debug + PartialEq {
     fn identity() -> Self;
 
     // We typically left-multiply stuff with G, so `g*_`.

@@ -176,3 +176,21 @@ impl<N: Analysis> Clone for Pattern<N> {
         }
     }
 }
+
+pub struct BaselineMatcher;
+
+impl<N: Analysis> Matcher<N> for BaselineMatcher {
+    type SymG = N::G;
+    fn compose(l: &Self::SymG, r: &Self::SymG) -> Self::SymG { N::G::compose(l, r) }
+    fn inverse(x: &Self::SymG) -> Self::SymG { N::G::inverse(x) }
+    fn from_gvar(id: GVar) -> Self::SymG { N::G::identity() } // GVars don't exist for the BaselineMatcher!
+    fn from_g(g: &N::G) -> Self::SymG { g.clone() }
+    fn expand(node: &N::L, fresh_gvar: impl FnMut() -> GVar) -> (/*up*/Self::SymG, /*children*/Box<[Self::SymG]>) {
+        let n = N::children_mut(&mut node.clone()).len();
+        (N::G::identity(), std::iter::repeat(N::G::identity()).take(n).collect())
+    }
+    fn solve<'eg>(state: State<'eg, N, Self>) -> Option<Subst<N>> {
+        if state.g_constraints.iter().any(|x| *x != N::G::identity()) { return None }
+        Some(state.subst)
+    }
+}
