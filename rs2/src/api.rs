@@ -43,5 +43,5 @@ pub trait Analysis: Sized {
     fn implied_nodes(i: Id, eg: &EGraph<Self>) -> Box<[(Self::G, Self::L)]> { Box::new([]) }
 
     // child_strings as Box<[String]> is the worst thing you could do performance-wise. But printing perf doesn't matter rn.
-    fn prettyprint(l: &Self::L, child_strings: Box<[String]>) -> String { todo!("can't prettyprint") }
+    fn prettyprint(l: &Self::L, child_strings: Box<[String]>) -> String { format!("<can't prettyprint>") }
 }

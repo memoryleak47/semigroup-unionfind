@@ -283,6 +283,12 @@ fn eqsat_test(t1: Term<ProofAnalysis>, t2: Term<ProofAnalysis>, rules: &Rules, n
 
     eqsat::<_, ProofMatcher>(eg, &rules, Box::new([]), Duration::MAX, usize::MAX, n);
     let p = eg.get_g_between(x1.clone(), x2.clone()).unwrap();
+    let t1_ = eg.get_semilattice(&x1);
+    let t2_ = eg.get_semilattice(&x2);
+    assert_eq!(t1_, t1);
+    assert_eq!(t2_, t2);
+    assert_eq!(act(&p, &t1, false), t2);
+    assert_eq!(act(&p, &t2, true), t1);
 
     dbg!(eg.hashcons.len());
 }
