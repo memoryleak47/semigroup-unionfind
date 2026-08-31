@@ -5,4 +5,5 @@ pub mod offset;
 pub mod caviar_offset;
 pub mod linear;
 pub mod proofs;
+pub mod proofs_explicit;
 pub mod lean;

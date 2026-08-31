@@ -73,7 +73,7 @@ pub fn add_expr<N: Analysis>(t: &Term<N>, eg: &mut EGraph<N>) -> (N::G, Id) {
     instantiate(t, eg, &Subst::<N>::new())
 }
 
-fn instantiate<N: Analysis>(pat: &Pattern<N>, eg: &mut EGraph<N>, subst: &Subst<N>) -> (N::G, Id) {
+pub fn instantiate<N: Analysis>(pat: &Pattern<N>, eg: &mut EGraph<N>, subst: &Subst<N>) -> (N::G, Id) {
     match pat {
         Pattern::PVar(var) => subst[var].clone(),
         Pattern::Node(n, pargs) => {

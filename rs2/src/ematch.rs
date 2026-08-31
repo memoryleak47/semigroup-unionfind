@@ -177,6 +177,28 @@ impl<N: Analysis> Clone for Pattern<N> {
     }
 }
 
+impl<N: Analysis> PartialEq for Pattern<N> {
+    fn eq(&self, other: &Pattern<N>) -> bool {
+        match (self, other) {
+            (Pattern::PVar(v1), Pattern::PVar(v2)) => v1 == v2,
+            (Pattern::Node(n1, children1), Pattern::Node(n2, children2)) => n1 == n2 && children1 == children2,
+            (Pattern::G(g1, pat1), Pattern::G(g2, pat2)) => g1 == g2 && pat1 == pat2,
+            _ => false,
+        }
+    }
+}
+impl<N: Analysis> Eq for Pattern<N> {}
+
+impl<N: Analysis> Hash for Pattern<N> {
+    fn hash<H>(&self, state: &mut H) where H: std::hash::Hasher {
+        match self {
+            Pattern::PVar(v) => (0u32, v).hash(state),
+            Pattern::Node(n, x) => (1u32, n, x).hash(state),
+            Pattern::G(g, children) => (2u32, g, children).hash(state),
+        }
+    }
+}
+
 pub struct BaselineMatcher;
 
 impl<N: Analysis> Matcher<N> for BaselineMatcher {
