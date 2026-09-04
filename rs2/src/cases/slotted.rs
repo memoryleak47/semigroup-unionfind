@@ -396,7 +396,15 @@ impl Matcher<Slotted> for SlottedMatcher {
     }
 
     fn expand(node: &SlottedLang, mut fresh_gvar: impl FnMut() -> GVar) -> (/*up*/Self::SymG, /*children*/Box<[Self::SymG]>) {
-        todo!()
+        match node {
+            SlottedLang::Lam(..) => todo!(),
+            SlottedLang::App(..) => {
+                let v = fresh_gvar();
+                (vec![SymSlotMapPiece::GVar(v, false)], vec![vec![SymSlotMapPiece::GVar(v, true)]; 2].into())
+            },
+            SlottedLang::Var(..) => todo!(),
+            SlottedLang::Sym(s) => (Vec::new(), Box::new([])),
+        }
     }
 
     fn solve<'eg>(mut state: State<'eg, Slotted, Self>) -> Option<Subst<Slotted>> {
