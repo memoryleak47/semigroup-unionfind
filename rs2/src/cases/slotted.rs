@@ -355,3 +355,51 @@ fn test4() {
 
     assert!(eg.is_equal(l3v3v4, l4v4v3));
 }
+
+/// E-Matching:
+
+struct SlottedMatcher;
+
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+enum SymSlotMapPiece {
+    GVar(GVar, /*true means inverted*/ bool),
+    Concrete(SlotMap),
+}
+
+fn inverse_piece(x: &SymSlotMapPiece) -> SymSlotMapPiece {
+    match x {
+        SymSlotMapPiece::GVar(v, b) => SymSlotMapPiece::GVar(*v, !*b),
+        SymSlotMapPiece::Concrete(m) => SymSlotMapPiece::Concrete(m.inverse()),
+    }
+}
+
+// this list is composed.
+type SymSlotMap = Vec<SymSlotMapPiece>;
+
+impl Matcher<Slotted> for SlottedMatcher {
+    type SymG = SymSlotMap;
+
+    fn compose(l: &Self::SymG, r: &Self::SymG) -> Self::SymG {
+        l.iter().cloned().chain(r.iter().cloned()).collect()
+    }
+
+    fn inverse(x: &Self::SymG) -> Self::SymG {
+        x.iter().rev().map(inverse_piece).collect()
+    }
+
+    fn from_gvar(v: GVar) -> Self::SymG {
+        vec![SymSlotMapPiece::GVar(v, false)]
+    }
+
+    fn from_g(m: &SlotMap) -> Self::SymG {
+        vec![SymSlotMapPiece::Concrete(m.clone())]
+    }
+
+    fn expand(node: &SlottedLang, mut fresh_gvar: impl FnMut() -> GVar) -> (/*up*/Self::SymG, /*children*/Box<[Self::SymG]>) {
+        todo!()
+    }
+
+    fn solve<'eg>(mut state: State<'eg, Slotted, Self>) -> Option<Subst<Slotted>> {
+        todo!()
+    }
+}
