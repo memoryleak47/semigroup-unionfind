@@ -332,6 +332,7 @@ impl Matcher<Slotted> for SlottedMatcher {
 }
 
 fn subst(v: GVar, val: SymSlotMap, state: &mut State<'_, Slotted, SlottedMatcher>) {
+    // println!("gvar {v} -> {val:?}");
     state.gs_constraints.remove(&v);
 
     let mut syms: Vec<&mut SymSlotMap> = Vec::new();
@@ -361,9 +362,17 @@ fn push_down(state: &mut State<'_, Slotted, SlottedMatcher>) {
         for (j, constraint) in state.g_constraints.iter_mut().enumerate() {
             for (i, a) in constraint.iter().enumerate() {
                 match a {
-                    SymSlotMapPiece::GVar(v, false) if *v != 0 => {
+                    SymSlotMapPiece::GVar(v, false) if !state.gs_constraints.contains_key(&v) => {
                         let a: SymSlotMap = constraint[0..i].iter().cloned().collect();
                         let b: SymSlotMap = constraint[(i+1)..].iter().cloned().collect();
+
+                        // if a and b contain v, we can't do this transformation.
+                        assert!(!a.contains(&SymSlotMapPiece::GVar(*v, false)));
+                        assert!(!a.contains(&SymSlotMapPiece::GVar(*v, true)));
+
+                        assert!(!b.contains(&SymSlotMapPiece::GVar(*v, false)));
+                        assert!(!b.contains(&SymSlotMapPiece::GVar(*v, true)));
+
                         // a*v*b = identity -> v = a⁻¹*b⁻¹
                         let val = SlottedMatcher::compose(&SlottedMatcher::inverse(&a), &SlottedMatcher::inverse(&b));
                         subst(*v, val, state);
@@ -494,7 +503,6 @@ fn slotted_matching1() {
 
     let pat = app_p(var_p(3), pvar("a"));
 
-    eg.dump();
-    dbg!(ematch::<Slotted, SlottedMatcher>(&pat, eg));
-    assert!(false);
+    let matches = ematch::<Slotted, SlottedMatcher>(&pat, eg);
+    assert_eq!(matches.len(), 1);
 }
