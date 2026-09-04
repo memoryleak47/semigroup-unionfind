@@ -325,10 +325,9 @@ impl Matcher<Slotted> for SlottedMatcher {
     }
 
     fn solve<'eg>(mut state: State<'eg, Slotted, Self>) -> Option<Subst<Slotted>> {
-        dbg!(&state);
         push_down(&mut state);
-        dbg!(&state);
-        todo!()
+        default_s(&mut state);
+        finalize(state)
     }
 }
 
@@ -377,6 +376,25 @@ fn push_down(state: &mut State<'_, Slotted, SlottedMatcher>) {
         }
         break
     }
+}
+
+fn default_s(state: &mut State<'_, Slotted, SlottedMatcher>) {
+    for (v, _) in std::mem::take(&mut state.gs_constraints) {
+        subst(v, Vec::new(), state);
+    }
+}
+
+fn finalize_sym(m: SymSlotMap) -> SlotMap {
+    let mut out = SlotMap::identity();
+    for x in m.iter() {
+        let SymSlotMapPiece::Concrete(mm) = x else { panic!() };
+        out = SlotMap::compose(&out, &mm);
+    }
+    out
+}
+
+fn finalize(state: State<'_, Slotted, SlottedMatcher>) -> Option<Subst<Slotted>> {
+    Some(state.subst.into_iter().map(|(x, (m, id))| (x, (finalize_sym(m), id))).collect())
 }
 
 ///--- TESTS ---///
@@ -476,6 +494,7 @@ fn slotted_matching1() {
 
     let pat = app_p(var_p(3), pvar("a"));
 
-    ematch::<Slotted, SlottedMatcher>(&pat, eg);
+    eg.dump();
+    dbg!(ematch::<Slotted, SlottedMatcher>(&pat, eg));
     assert!(false);
 }
