@@ -325,8 +325,12 @@ impl Matcher<Slotted> for SlottedMatcher {
     }
 
     fn solve<'eg>(mut state: State<'eg, Slotted, Self>) -> Option<Subst<Slotted>> {
-        push_down(&mut state);
         default_s(&mut state);
+        push_down(&mut state);
+        simplify_all(&mut state);
+        default_unconstrained(&mut state);
+        simplify_all(&mut state);
+        dbg!(&state);
         finalize(state)
     }
 }
@@ -367,11 +371,10 @@ fn push_down(state: &mut State<'_, Slotted, SlottedMatcher>) {
                         let b: SymSlotMap = constraint[(i+1)..].iter().cloned().collect();
 
                         // if a and b contain v, we can't do this transformation.
-                        assert!(!a.contains(&SymSlotMapPiece::GVar(*v, false)));
-                        assert!(!a.contains(&SymSlotMapPiece::GVar(*v, true)));
-
-                        assert!(!b.contains(&SymSlotMapPiece::GVar(*v, false)));
-                        assert!(!b.contains(&SymSlotMapPiece::GVar(*v, true)));
+                        if a.contains(&SymSlotMapPiece::GVar(*v, false)) { continue }
+                        if a.contains(&SymSlotMapPiece::GVar(*v, true)) { continue }
+                        if b.contains(&SymSlotMapPiece::GVar(*v, false)) { continue }
+                        if b.contains(&SymSlotMapPiece::GVar(*v, true)) { continue }
 
                         // a*v*b = identity -> v = a⁻¹*b⁻¹
                         let val = SlottedMatcher::compose(&SlottedMatcher::inverse(&a), &SlottedMatcher::inverse(&b));
@@ -393,13 +396,72 @@ fn default_s(state: &mut State<'_, Slotted, SlottedMatcher>) {
     }
 }
 
-fn finalize_sym(m: SymSlotMap) -> SlotMap {
-    let mut out = SlotMap::identity();
-    for x in m.iter() {
-        let SymSlotMapPiece::Concrete(mm) = x else { panic!() };
-        out = SlotMap::compose(&out, &mm);
-    }
+fn syms_mut<'a>(state: &'a mut State<'_, Slotted, SlottedMatcher>) -> Vec<&'a mut SymSlotMap> {
+    let mut out = Vec::new();
+    out.extend(state.g_constraints.iter_mut());
+    out.extend(state.subst.iter_mut().map(|(_, (g, _))| g));
     out
+}
+
+fn simplify_all(state: &mut State<'_, Slotted, SlottedMatcher>) {
+    for g in syms_mut(state) {
+        simplify_sym(g);
+    }
+}
+
+fn simplify_sym(sym: &mut SymSlotMap) {
+    'l: loop {
+        sym.retain(|x| *x != SymSlotMapPiece::Concrete(SlotMap::identity()));
+        if sym.is_empty() { return }
+        for i in 0..sym.len()-1 {
+            let a = &sym[i];
+            let b = &sym[i+1];
+            match (a, b) {
+                (SymSlotMapPiece::Concrete(ma), SymSlotMapPiece::Concrete(mb)) => {
+                    sym[i] = SymSlotMapPiece::Concrete(SlotMap::compose(&ma, &mb));
+                    sym.remove(i+1);
+                    continue 'l;
+                },
+                (SymSlotMapPiece::GVar(v1, b1), SymSlotMapPiece::GVar(v2, b2)) if v1 == v2 && b1 != b2 => {
+                    sym.remove(i);
+                    sym.remove(i);
+                    continue 'l;
+                },
+                _ => {},
+            }
+        }
+        break
+    }
+}
+
+fn default_unconstrained(state: &mut State<'_, Slotted, SlottedMatcher>) {
+    'l: loop {
+        for (_, (g, _)) in &state.subst {
+            for x in g {
+                let SymSlotMapPiece::GVar(v, _) = x else { continue };
+                if !is_unconstrained(*v, state) { continue }
+                subst(*v, Vec::new(), state);
+                continue 'l;
+            }
+        }
+        break
+    }
+}
+
+fn is_unconstrained(v: GVar, state: &State<'_, Slotted, SlottedMatcher>) -> bool {
+    for x in &state.g_constraints {
+        for x in x {
+            if let SymSlotMapPiece::GVar(v2, _) = x && *v2 == v { return false }
+        }
+    }
+    true
+}
+
+fn finalize_sym(sym: SymSlotMap) -> SlotMap {
+    if sym.is_empty() { return SlotMap::identity() }
+
+    let [SymSlotMapPiece::Concrete(m)] = &sym[..] else { panic!() };
+    return m.clone()
 }
 
 fn finalize(state: State<'_, Slotted, SlottedMatcher>) -> Option<Subst<Slotted>> {
@@ -502,6 +564,22 @@ fn slotted_matching1() {
     eg.rebuild_nodes();
 
     let pat = app_p(var_p(3), pvar("a"));
+
+    let matches = ematch::<Slotted, SlottedMatcher>(&pat, eg);
+    assert_eq!(matches.len(), 1);
+}
+
+#[test]
+fn slotted_matching2() {
+    let mut eg = &mut EGraph::new();
+
+    let v2 = var(2, eg);
+    let l2 = app(v2.clone(), v2, eg);
+
+    // TODO necessary so far.
+    eg.rebuild_nodes();
+
+    let pat = app_p(pvar("a"), pvar("a"));
 
     let matches = ematch::<Slotted, SlottedMatcher>(&pat, eg);
     assert_eq!(matches.len(), 1);
