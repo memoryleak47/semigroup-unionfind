@@ -422,6 +422,9 @@ fn slotted_matching1() {
     let v2 = var(2, eg);
     let l2 = app(v2.clone(), v2, eg);
 
+    // TODO necessary so far.
+    eg.rebuild_nodes();
+
     let pat = app_p(var_p(2), pvar("a"));
 
     ematch::<Slotted, SlottedMatcher>(&pat, eg);
