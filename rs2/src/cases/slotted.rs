@@ -238,6 +238,15 @@ impl Analysis for Slotted {
             SlottedLang::Var(_)|SlottedLang::Sym(_) => Box::new([]),
         }
     }
+
+    fn prettyprint(n: &Self::L, children: Box<[String]>) -> String {
+        match n {
+            SlottedLang::Lam(..) => format!("(lam {} {})", &children[0], &children[1]),
+            SlottedLang::App(..) => format!("(app {} {})", &children[0], &children[1]),
+            SlottedLang::Var(x) => format!("(var {x})"),
+            SlottedLang::Sym(s) => s.to_string(),
+        }
+    }
 }
 
 fn complete(mut d: HashMap<Slot, Slot>) -> SlotMap {
@@ -334,6 +343,7 @@ fn app_p(x: Pat, y: Pat) -> Pat { Pattern::Node(SlottedLang::App(nil(), nil()), 
 fn var_p(x: Slot) -> Pat { Pattern::Node(SlottedLang::Var(x), Box::new([])) }
 fn lam_p(x: Slot, b: Pat) -> Pat { let x = var_p(x); Pattern::Node(SlottedLang::Lam(nil(), nil()), Box::new([x, b])) }
 fn sym_p(s: &str) -> Pat { Pattern::Node(SlottedLang::Sym(Symbol::new(s)), Box::new([])) }
+fn pvar(s: &str) -> Pat { Pattern::PVar(Symbol::new(s)) }
 
 #[test]
 fn alpha() {
@@ -410,9 +420,10 @@ fn slotted_matching1() {
     let mut eg = &mut EGraph::new();
 
     let v2 = var(2, eg);
-    let l2 = lam(2, v2, eg);
+    let l2 = app(v2.clone(), v2, eg);
 
-    let pat = lam_p(3, var_p(3));
+    let pat = app_p(var_p(2), pvar("a"));
 
     ematch::<Slotted, SlottedMatcher>(&pat, eg);
+    assert!(false);
 }
