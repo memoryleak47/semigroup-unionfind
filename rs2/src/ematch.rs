@@ -38,6 +38,7 @@ pub trait Matcher<N: Analysis>: Sized {
 
 pub type GVar = usize;
 
+#[derive(Debug)]
 pub struct State<'eg, N: Analysis, M: Matcher<N>> {
     pub g_constraints: Vec<M::SymG>,
     pub gs_constraints: HashMap<GVar, &'eg N::S>,

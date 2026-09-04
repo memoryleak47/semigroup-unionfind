@@ -157,7 +157,8 @@ fn complete_data(d: &mut SlottedData) {
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 enum SlottedLang {
-    Lam(Slot, (SlotMap, Id)),
+    // For simplicity, we represent (lam $x $x) as (lam (var $x) (var $x)).
+    Lam((SlotMap, Id), (SlotMap, Id)),
     App((SlotMap, Id), (SlotMap, Id)),
     Var(Slot),
     Sym(Symbol),
@@ -165,6 +166,7 @@ enum SlottedLang {
 
 /// Slotted ///
 
+#[derive(Debug)]
 struct Slotted;
 
 impl Analysis for Slotted {
@@ -173,56 +175,40 @@ impl Analysis for Slotted {
     type L = SlottedLang;
 
     fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Either<Self::L, Id>) {
+        let f = |x1: &(SlotMap, Id), x2: &(SlotMap, Id), cb: fn((SlotMap, Id), (SlotMap, Id)) -> SlottedLang| {
+            let (g1, i1) = uf.find(x1.clone());
+            let (g2, i2) = uf.find(x2.clone());
+
+            let mut d = HashMap::new();
+            // d :: slots(n) -> SHAPE
+
+            let mut slots1: Vec<Slot> = uf.get_leader_semilattice(i1).slots.iter().copied().collect();
+            slots1.sort();
+            let it1 = slots1.into_iter().map(|x| g1.get(x));
+
+            let mut slots2: Vec<Slot> = uf.get_leader_semilattice(i2).slots.iter().copied().collect();
+            slots2.sort();
+            let it2 = slots2.into_iter().map(|x| g2.get(x));
+
+            let it = it1.chain(it2);
+
+            for s in it {
+                if !d.contains_key(&s) {
+                    d.insert(s, d.len());
+                }
+            }
+            let d = complete(d);
+            let m1 = SlotMap::compose(&d, &g1);
+            let m1 = canon((m1, i1), uf);
+
+            let m2 = SlotMap::compose(&d, &g2);
+            let m2 = canon((m2, i2), uf);
+
+            (d.inverse(), Either::L(cb((m1, i1), (m2, i2))))
+        };
         match n {
-            SlottedLang::Lam(x, b) => {
-                let (g, b) = uf.find(b.clone());
-                let mut d = HashMap::new();
-                // d :: slots(b) -> SHAPE
-
-                let mut slots: Vec<Slot> = uf.get_leader_semilattice(b).slots.iter().copied().collect();
-                slots.sort();
-                let it = std::iter::once(*x).chain(slots.into_iter().map(|x| g.get(x)));
-                for s in it {
-                    if !d.contains_key(&s) {
-                        d.insert(s, d.len());
-                    }
-                }
-                let d = complete(d);
-                let m = SlotMap::compose(&d, &g);
-                let m = canon((m, b), uf);
-                (d.inverse(), Either::L(SlottedLang::Lam(0, (m, b))))
-            },
-            SlottedLang::App(x1, x2) => {
-                let (g1, i1) = uf.find(x1.clone());
-                let (g2, i2) = uf.find(x2.clone());
-
-                let mut d = HashMap::new();
-                // d :: slots(n) -> SHAPE
-
-                let mut slots1: Vec<Slot> = uf.get_leader_semilattice(i1).slots.iter().copied().collect();
-                slots1.sort();
-                let it1 = slots1.into_iter().map(|x| g1.get(x));
-
-                let mut slots2: Vec<Slot> = uf.get_leader_semilattice(i2).slots.iter().copied().collect();
-                slots2.sort();
-                let it2 = slots2.into_iter().map(|x| g2.get(x));
-
-                let it = it1.chain(it2);
-
-                for s in it {
-                    if !d.contains_key(&s) {
-                        d.insert(s, d.len());
-                    }
-                }
-                let d = complete(d);
-                let m1 = SlotMap::compose(&d, &g1);
-                let m1 = canon((m1, i1), uf);
-
-                let m2 = SlotMap::compose(&d, &g2);
-                let m2 = canon((m2, i2), uf);
-
-                (d.inverse(), Either::L(SlottedLang::App((m1, i1), (m2, i2))))
-            },
+            SlottedLang::Lam(x1, x2) => f(x1, x2, SlottedLang::Lam),
+            SlottedLang::App(x1, x2) => f(x1, x2, SlottedLang::App),
             SlottedLang::Var(x) => {
                 if *x == 0 { (SlotMap::identity(), Either::L(n.clone())) }
                 else {
@@ -236,20 +222,21 @@ impl Analysis for Slotted {
 
     fn mk(n: &Self::L, _id: Id, uf: &Unionfind<Self::S>) -> Self::S {
         let slots = match n {
-            SlottedLang::Lam(x, b) => {
-                let mut slots = uf.get_semilattice(b).slots;
-                slots.remove(&x);
-                slots
-            },
-            SlottedLang::App(x1, x2) => {
-                &uf.get_semilattice(x1).slots | &uf.get_semilattice(x2).slots
-            },
+            SlottedLang::Lam(x1, x2) => &uf.get_semilattice(x2).slots - &uf.get_semilattice(x1).slots,
+            SlottedLang::App(x1, x2) => &uf.get_semilattice(x1).slots | &uf.get_semilattice(x2).slots,
             SlottedLang::Var(x) => std::iter::once(*x).collect(),
             SlottedLang::Sym(_) => std::iter::empty().collect(),
         };
         let mut group = HashSet::new();
         group.insert(SlotMap::identity());
         SlottedData { slots, group }
+    }
+
+    fn children_mut(n: &mut Self::L) -> Box<[&mut (SlotMap, Id)]> {
+        match n {
+            SlottedLang::Lam(x1, x2)|SlottedLang::App(x1, x2) => Box::new([x1, x2]),
+            SlottedLang::Var(_)|SlottedLang::Sym(_) => Box::new([]),
+        }
     }
 }
 
@@ -278,13 +265,75 @@ fn canon((m, x): (SlotMap, Id), uf: &Unionfind<SlottedData>) -> SlotMap {
     let m2 = m.iter().filter(|(a, b)| slots.contains(a)).collect();
     complete(m2)
 }
+/// E-Matching:
 
+#[derive(Debug)]
+struct SlottedMatcher;
 
-//--- TESTS ---//
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+enum SymSlotMapPiece {
+    GVar(GVar, /*true means inverted*/ bool),
+    Concrete(SlotMap),
+}
+
+fn inverse_piece(x: &SymSlotMapPiece) -> SymSlotMapPiece {
+    match x {
+        SymSlotMapPiece::GVar(v, b) => SymSlotMapPiece::GVar(*v, !*b),
+        SymSlotMapPiece::Concrete(m) => SymSlotMapPiece::Concrete(m.inverse()),
+    }
+}
+
+// this list is composed.
+type SymSlotMap = Vec<SymSlotMapPiece>;
+
+impl Matcher<Slotted> for SlottedMatcher {
+    type SymG = SymSlotMap;
+
+    fn compose(l: &Self::SymG, r: &Self::SymG) -> Self::SymG {
+        l.iter().cloned().chain(r.iter().cloned()).collect()
+    }
+
+    fn inverse(x: &Self::SymG) -> Self::SymG {
+        x.iter().rev().map(inverse_piece).collect()
+    }
+
+    fn from_gvar(v: GVar) -> Self::SymG {
+        vec![SymSlotMapPiece::GVar(v, false)]
+    }
+
+    fn from_g(m: &SlotMap) -> Self::SymG {
+        vec![SymSlotMapPiece::Concrete(m.clone())]
+    }
+
+    fn expand(node: &SlottedLang, mut fresh_gvar: impl FnMut() -> GVar) -> (/*up*/Self::SymG, /*children*/Box<[Self::SymG]>) {
+        match node {
+            SlottedLang::Lam(..)|SlottedLang::App(..) => {
+                let v = fresh_gvar();
+                (vec![SymSlotMapPiece::GVar(v, false)], vec![vec![SymSlotMapPiece::GVar(v, true)]; 2].into())
+            },
+            SlottedLang::Var(..)|SlottedLang::Sym(..) => (Vec::new(), Box::new([])),
+        }
+    }
+
+    fn solve<'eg>(mut state: State<'eg, Slotted, Self>) -> Option<Subst<Slotted>> {
+        dbg!(&state);
+        todo!()
+    }
+}
+
+///--- TESTS ---///
+
 fn app(x: (SlotMap, Id), y: (SlotMap, Id), eg: &mut EGraph<Slotted>) -> (SlotMap, Id) { eg.add(&SlottedLang::App(x, y)) }
 fn var(x: Slot, eg: &mut EGraph<Slotted>) -> (SlotMap, Id) { eg.add(&SlottedLang::Var(x)) }
-fn lam(x: Slot, b: (SlotMap, Id), eg: &mut EGraph<Slotted>) -> (SlotMap, Id) { eg.add(&SlottedLang::Lam(x, b)) }
+fn lam(x: Slot, b: (SlotMap, Id), eg: &mut EGraph<Slotted>) -> (SlotMap, Id) { let x = var(x, eg); eg.add(&SlottedLang::Lam(x, b)) }
 fn sym(s: &str, eg: &mut EGraph<Slotted>) -> (SlotMap, Id) { eg.add(&SlottedLang::Sym(Symbol::new(s))) }
+
+type Pat = Pattern<Slotted>;
+fn nil() -> (SlotMap, Id) { (SlotMap::identity(), Id(0)) }
+fn app_p(x: Pat, y: Pat) -> Pat { Pattern::Node(SlottedLang::App(nil(), nil()), Box::new([x, y])) }
+fn var_p(x: Slot) -> Pat { Pattern::Node(SlottedLang::Var(x), Box::new([])) }
+fn lam_p(x: Slot, b: Pat) -> Pat { let x = var_p(x); Pattern::Node(SlottedLang::Lam(nil(), nil()), Box::new([x, b])) }
+fn sym_p(s: &str) -> Pat { Pattern::Node(SlottedLang::Sym(Symbol::new(s)), Box::new([])) }
 
 #[test]
 fn alpha() {
@@ -356,58 +405,14 @@ fn test4() {
     assert!(eg.is_equal(l3v3v4, l4v4v3));
 }
 
-/// E-Matching:
+#[test]
+fn slotted_matching1() {
+    let mut eg = &mut EGraph::new();
 
-struct SlottedMatcher;
+    let v2 = var(2, eg);
+    let l2 = lam(2, v2, eg);
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
-enum SymSlotMapPiece {
-    GVar(GVar, /*true means inverted*/ bool),
-    Concrete(SlotMap),
-}
+    let pat = lam_p(3, var_p(3));
 
-fn inverse_piece(x: &SymSlotMapPiece) -> SymSlotMapPiece {
-    match x {
-        SymSlotMapPiece::GVar(v, b) => SymSlotMapPiece::GVar(*v, !*b),
-        SymSlotMapPiece::Concrete(m) => SymSlotMapPiece::Concrete(m.inverse()),
-    }
-}
-
-// this list is composed.
-type SymSlotMap = Vec<SymSlotMapPiece>;
-
-impl Matcher<Slotted> for SlottedMatcher {
-    type SymG = SymSlotMap;
-
-    fn compose(l: &Self::SymG, r: &Self::SymG) -> Self::SymG {
-        l.iter().cloned().chain(r.iter().cloned()).collect()
-    }
-
-    fn inverse(x: &Self::SymG) -> Self::SymG {
-        x.iter().rev().map(inverse_piece).collect()
-    }
-
-    fn from_gvar(v: GVar) -> Self::SymG {
-        vec![SymSlotMapPiece::GVar(v, false)]
-    }
-
-    fn from_g(m: &SlotMap) -> Self::SymG {
-        vec![SymSlotMapPiece::Concrete(m.clone())]
-    }
-
-    fn expand(node: &SlottedLang, mut fresh_gvar: impl FnMut() -> GVar) -> (/*up*/Self::SymG, /*children*/Box<[Self::SymG]>) {
-        match node {
-            SlottedLang::Lam(..) => todo!(),
-            SlottedLang::App(..) => {
-                let v = fresh_gvar();
-                (vec![SymSlotMapPiece::GVar(v, false)], vec![vec![SymSlotMapPiece::GVar(v, true)]; 2].into())
-            },
-            SlottedLang::Var(..) => todo!(),
-            SlottedLang::Sym(s) => (Vec::new(), Box::new([])),
-        }
-    }
-
-    fn solve<'eg>(mut state: State<'eg, Slotted, Self>) -> Option<Subst<Slotted>> {
-        todo!()
-    }
+    ematch::<Slotted, SlottedMatcher>(&pat, eg);
 }
