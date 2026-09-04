@@ -326,7 +326,56 @@ impl Matcher<Slotted> for SlottedMatcher {
 
     fn solve<'eg>(mut state: State<'eg, Slotted, Self>) -> Option<Subst<Slotted>> {
         dbg!(&state);
+        push_down(&mut state);
+        dbg!(&state);
         todo!()
+    }
+}
+
+fn subst(v: GVar, val: SymSlotMap, state: &mut State<'_, Slotted, SlottedMatcher>) {
+    state.gs_constraints.remove(&v);
+
+    let mut syms: Vec<&mut SymSlotMap> = Vec::new();
+    for c in state.g_constraints.iter_mut() { syms.push(c); }
+    for (_, c) in state.subst.iter_mut() { syms.push(&mut c.0); }
+
+    for c in syms {
+        let c2 = std::mem::take(c);
+        for x in c2 {
+            let x =
+                if let SymSlotMapPiece::GVar(v2, b) = x && v2 == v {
+                    if b {
+                        SlottedMatcher::inverse(&val)
+                    } else {
+                        val.clone()
+                    }
+                } else {
+                    vec![x]
+                };
+            c.extend(x);
+        }
+    }
+}
+
+fn push_down(state: &mut State<'_, Slotted, SlottedMatcher>) {
+    'l: loop {
+        for (j, constraint) in state.g_constraints.iter_mut().enumerate() {
+            for (i, a) in constraint.iter().enumerate() {
+                match a {
+                    SymSlotMapPiece::GVar(v, false) if *v != 0 => {
+                        let a: SymSlotMap = constraint[0..i].iter().cloned().collect();
+                        let b: SymSlotMap = constraint[(i+1)..].iter().cloned().collect();
+                        // a*v*b = identity -> v = a⁻¹*b⁻¹
+                        let val = SlottedMatcher::compose(&SlottedMatcher::inverse(&a), &SlottedMatcher::inverse(&b));
+                        subst(*v, val, state);
+                        state.g_constraints.remove(j);
+                        continue 'l;
+                    },
+                    _ => {},
+                }
+            }
+        }
+        break
     }
 }
 
@@ -425,7 +474,7 @@ fn slotted_matching1() {
     // TODO necessary so far.
     eg.rebuild_nodes();
 
-    let pat = app_p(var_p(2), pvar("a"));
+    let pat = app_p(var_p(3), pvar("a"));
 
     ematch::<Slotted, SlottedMatcher>(&pat, eg);
     assert!(false);
