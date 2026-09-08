@@ -184,7 +184,10 @@ fn solve(skel: &Skel<OffsetAnalysis>, pat: &Pattern<OffsetAnalysis>, constraints
             Some(())
         },
         (Skel::Node(skel_g, skel_node, skel_children), Pattern::Node(pat_node, pat_children)) => {
-            todo!()
+            for ((o, _, s), p) in skel_children.iter().zip(pat_children.iter()) {
+                solve(s, p, constraints, subst)?;
+            }
+            Some(())
         },
         _ => None,
     }
