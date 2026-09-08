@@ -46,5 +46,14 @@ pub trait Analysis: Sized {
     // child_strings as Box<[String]> is the worst thing you could do performance-wise. But printing perf doesn't matter rn.
     fn prettyprint(l: &Self::L, child_strings: Box<[String]>) -> String { format!("<can't prettyprint>") }
 
+    // returns whether those are equal up to some G, excluding children.
+    fn matches(n1: &Self::L, n2: &Self::L) -> bool {
+        let nil = (Self::G::identity(), Id(0));
+        let mut n1 = n1.clone();
+        let mut n2 = n2.clone();
+        for x in Self::children_mut(&mut n1) { *x = nil.clone(); }
+        for x in Self::children_mut(&mut n2) { *x = nil.clone(); }
+        n1 == n2
+    }
     fn ematch(eg: &EGraph<Self>, id: Id, pat: &Pattern<Self>) -> Vec<Subst<Self>> { todo!("ematch unsupported!") }
 }

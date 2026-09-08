@@ -153,6 +153,16 @@ impl Analysis for OffsetAnalysis {
             OffsetLang::App(_) => format!("(app {} {})", &children[0], &children[1]),
         }
     }
+
+    fn matches(n1: &Self::L, n2: &Self::L) -> bool {
+        match (n1, n2) {
+            (OffsetLang::App(_),OffsetLang::App(_)) => true,
+            (OffsetLang::Add(_),OffsetLang::Add(_)) => true,
+            (OffsetLang::Const(_),OffsetLang::Const(_)) => true,
+            (OffsetLang::Symbol(s1),OffsetLang::Symbol(s2)) => s1 == s2,
+            _ => false,
+        }
+    }
 }
 
 fn mk_pvar(x: &str) -> Pat { Pattern::PVar(Symbol::new(x)) }
