@@ -170,6 +170,12 @@ impl Analysis for ProofAnalysis {
     fn children_mut(node: &mut ProofLang) -> Box<[&mut (Proof, Id)]> {
         node.args.iter_mut().collect()
     }
+
+    fn ematch(eg: &EGraph<Self>, i: Id, pat: &Pattern<Self>) -> Vec<Subst<Self>> {
+        skeleton_ematch(eg, i, pat).into_iter().map(|(subst, _)| {
+            subst.into_iter().map(|(k, v)| (k, (mk_refl(), v))).collect()
+        }).collect()
+    }
 }
 
 /// Tests
