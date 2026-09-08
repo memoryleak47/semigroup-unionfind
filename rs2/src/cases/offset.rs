@@ -144,6 +144,15 @@ impl Analysis for OffsetAnalysis {
 
         todo!()
     }
+
+    fn prettyprint(n: &Self::L, children: Box<[String]>) -> String {
+        match n {
+            OffsetLang::Add(_) => format!("(+ {} {})", &children[0], &children[1]),
+            OffsetLang::Const(a) => format!("{a}"),
+            OffsetLang::Symbol(s) => s.to_string(),
+            OffsetLang::App(_) => format!("(app {} {})", &children[0], &children[1]),
+        }
+    }
 }
 
 fn mk_pvar(x: &str) -> Pat { Pattern::PVar(Symbol::new(x)) }
