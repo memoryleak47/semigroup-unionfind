@@ -121,34 +121,6 @@ fn justify((p, x): (Proof, Id), j: Symbol) -> (Proof, Id) {
     (Proof::compose(&p2, &p), x)
 }
 
-/// E-Matching
-
-struct ProofMatcher;
-
-impl Matcher<ProofAnalysis> for ProofMatcher {
-    type SymG = ();
-
-    // l*r*x, thus r is applied first.
-    fn compose(_: &(), _: &()) {}
-    fn inverse(_: &()) {}
-
-    fn from_gvar(_: GVar) {}
-    fn from_g(_: &Proof) {}
-
-    fn expand(node: &ProofLang, fresh_gvar: impl FnMut() -> GVar) -> ((), Box<[()]>) {
-        // NOTE: A more faithful implementation would expand
-        //   f(x1, ..., xn) to
-        //   cong(g1, ..., gn) * f(g1⁻¹*x1, ..., gn⁻¹*xn)
-        // This however doesn't appear to be necessary, as the Proof theory always has a trivial solution, which we return in solve.
-        let arity = ProofAnalysis::children_mut(&mut node.clone()).len();
-        ((), vec![(); arity].into_boxed_slice())
-    }
-
-    fn solve<'eg>(state: State<'eg, ProofAnalysis, Self>) -> Option<Subst<ProofAnalysis>> {
-        Some(state.subst.into_iter().map(|(pvar, ((), i))| (pvar, (mk_refl(), i))).collect())
-    }
-}
-
 /// Tests
 
 fn atom(s: &str) -> Pat {
@@ -220,7 +192,7 @@ fn eqsat_test(t1: Term<ProofAnalysis>, t2: Term<ProofAnalysis>, rules: &Rules, n
     let x1 = add_expr(&t1, eg);
     let x2 = add_expr(&t2, eg);
 
-    eqsat::<_, ProofMatcher>(eg, &rules, Box::new([]), Duration::MAX, usize::MAX, n);
+    eqsat::<_>(eg, &rules, Box::new([]), Duration::MAX, usize::MAX, n);
     let p = eg.get_g_between(x1.clone(), x2.clone()).unwrap();
 
     dbg!(eg.hashcons.len());

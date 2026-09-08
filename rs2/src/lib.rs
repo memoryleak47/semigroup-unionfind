@@ -14,9 +14,6 @@ pub use uf::*;
 mod egraph;
 pub use egraph::*;
 
-mod baseline_ematch;
-pub use baseline_ematch::*;
-
 mod ematch;
 pub use ematch::*;
 

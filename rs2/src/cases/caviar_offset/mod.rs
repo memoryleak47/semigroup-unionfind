@@ -4,9 +4,6 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::fmt::Display;
 
-mod matching;
-use matching::*;
-
 // mod testing;
 // use testing::*;
 
@@ -119,9 +116,9 @@ pub fn run_caviar() {
     let mut iter = 0;
     loop {
         if *ACTIVE {
-            eqsat::<CaviarAnalysis, CaviarMatcher>(&mut eg, &*rules, Box::new([]), Duration::MAX, usize::MAX, 1);
+            eqsat::<CaviarAnalysis>(&mut eg, &*rules, Box::new([]), Duration::MAX, usize::MAX, 1);
         } else {
-            eqsat::<CaviarAnalysis, BaselineMatcher>(&mut eg, &*rules, Box::new([]), Duration::MAX, usize::MAX, 1);
+            eqsat::<CaviarAnalysis>(&mut eg, &*rules, Box::new([]), Duration::MAX, usize::MAX, 1);
         }
         
         iter += 1;

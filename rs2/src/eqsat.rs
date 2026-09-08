@@ -33,7 +33,7 @@ pub enum StopReason {
 
 pub type Hook<N> = Box<dyn FnMut(&mut EGraph<N>) -> Result<(), StopReason>>;
 
-pub fn eqsat<N: Analysis, M: Matcher<N>>(eg: &mut EGraph<N>, rules: &[Rule<N>], mut hooks: Box<[Hook<N>]>, time_limit: Duration, node_limit: usize, iter_limit: usize) -> StopReason {
+pub fn eqsat<N: Analysis>(eg: &mut EGraph<N>, rules: &[Rule<N>], mut hooks: Box<[Hook<N>]>, time_limit: Duration, node_limit: usize, iter_limit: usize) -> StopReason {
     let mut start = Instant::now();
 
     let check_limits = move |eg: &EGraph<N>| {
@@ -52,7 +52,7 @@ pub fn eqsat<N: Analysis, M: Matcher<N>>(eg: &mut EGraph<N>, rules: &[Rule<N>], 
 
         let mut matches = Vec::new();
         for (lhs, _) in rules.iter() {
-            matches.push(ematch::<N, M>(lhs, eg));
+            matches.push(N::ematch(eg, todo!(), lhs));
             if let Err(stop) = check_limits(eg) { return stop }
         }
 

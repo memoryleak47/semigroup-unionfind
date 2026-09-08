@@ -44,4 +44,6 @@ pub trait Analysis: Sized {
 
     // child_strings as Box<[String]> is the worst thing you could do performance-wise. But printing perf doesn't matter rn.
     fn prettyprint(l: &Self::L, child_strings: Box<[String]>) -> String { format!("<can't prettyprint>") }
+
+    fn ematch(eg: &EGraph<Self>, id: Id, pat: &Pattern<Self>) -> Vec<Subst<Self>> { todo!("ematch unsupported!") }
 }
