@@ -179,7 +179,8 @@ fn test_offset_ematching() {
     let a = add_expr(&e, &mut eg);
 
     let pat = mk_app(mk_symbol("a"), mk_add(mk_pvar("?x"), mk_const(17)));
-    let matches = ematch_all(&eg, &pat);
+    eg.rebuild_nodes();
+    let matches = OffsetAnalysis::ematch(&eg, a.1, &pat);
     for x in &matches {
         dbg!(x);
     }
