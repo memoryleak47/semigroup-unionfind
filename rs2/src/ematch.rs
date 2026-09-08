@@ -28,7 +28,7 @@ pub enum Skel<N: Analysis> {
 pub type SkelEdge<N: Analysis> = (N::G, N::S, Skel<N>);
 
 // Matches in the e-graph while disregarding the G annotations
-pub fn skeleton_ematch<N: Analysis>(eg: &EGraph<N>) -> (HashMap<PVar, Id>, Skel<N>) {
+pub fn skeleton_ematch<N: Analysis>(eg: &EGraph<N>, i: Id, pat: &Pattern<N>) -> (HashMap<PVar, Id>, Skel<N>) {
     todo!()
 }
 
