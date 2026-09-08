@@ -39,6 +39,7 @@ impl Group for Linear {
     }
 }
 
+#[derive(Clone)]
 struct ConstProp(Option<F64>);
 
 fn is_close(x: F64, y: F64) -> bool { (x - y).abs() <= 1e-10 }

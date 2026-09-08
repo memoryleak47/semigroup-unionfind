@@ -63,7 +63,7 @@ impl Group for SlotMap {
 
 /// SlottedData ///
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 struct SlottedData {
     slots: HashSet<Slot>,
     group: HashSet<SlotMap>,

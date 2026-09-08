@@ -23,27 +23,25 @@ pub fn is_term<N: Analysis>(pat: &Pattern<N>) -> bool {
 
 pub enum Skel<N: Analysis> {
     PVar(Id),
-    Node(N::L, Box<[SkelEdge<N>]>),
+    Node(N::G, N::L, Box<[(N::G, N::S, Skel<N>)]>),
 }
-pub type SkelEdge<N: Analysis> = (N::G, N::S, Skel<N>);
 
-// Matches in the e-graph while disregarding the G annotations
+// Matches in the e-graph while disregarding the G annotations.
 pub fn skeleton_ematch<N: Analysis>(eg: &EGraph<N>, id: Id, pat: &Pattern<N>) -> Vec<(HashMap<PVar, Id>, Skel<N>)> {
-    let _ = ematch_impl(id, pat, eg, HashMap::new());
-    todo!()
+    ematch_impl(id, pat, eg, HashMap::new())
 }
 
-fn ematch_impl<N: Analysis>(id: Id, pat: &Pattern<N>, eg: &EGraph<N>, subst: HashMap<PVar, Id>) -> Vec<HashMap<PVar, Id>> {
+fn ematch_impl<N: Analysis>(id: Id, pat: &Pattern<N>, eg: &EGraph<N>, subst: HashMap<PVar, Id>) -> Vec<(HashMap<PVar, Id>, Skel<N>)> {
     match pat {
         Pattern::PVar(var) => {
             let mut subst = subst;
             if let Some(old_id) = subst.insert(*var, id) && id != old_id { return Vec::new() }
-            vec![subst]
+            vec![(subst, Skel::PVar(id))]
         },
         Pattern::Node(pn, pargs) => {
             let mut out = Vec::new();
             for (g, n) in eg.nodes_of_bare(id) {
-                out.extend(ematch_node(&n, pn, pargs, eg, subst.clone()));
+                out.extend(ematch_node(g, &n, pn, pargs, eg, subst.clone()));
             }
             out
         },
@@ -51,17 +49,22 @@ fn ematch_impl<N: Analysis>(id: Id, pat: &Pattern<N>, eg: &EGraph<N>, subst: Has
     }
 }
 
-fn ematch_node<N: Analysis>(node: &N::L, patnode: &N::L, pat_args: &[Pattern<N>], eg: &EGraph<N>, subst: HashMap<PVar, Id>) -> Vec<HashMap<PVar, Id>> {
+fn ematch_node<N: Analysis>(g_base: N::G, node: &N::L, patnode: &N::L, pat_args: &[Pattern<N>], eg: &EGraph<N>, subst: HashMap<PVar, Id>) -> Vec<(HashMap<PVar, Id>, Skel<N>)> {
     if !matches::<N>(node, patnode) { return Vec::new() }
 
     let mut node = node.clone();
 
-    let mut out = vec![subst];
-    for (c, cp) in N::children_mut(&mut node).into_iter().zip(pat_args) {
-        for subst in std::mem::take(&mut out) {
-            out.extend(ematch_impl::<N>(c.1, cp, eg, subst));
+    let mut out: Vec<(_, Vec<(N::G, N::S, Skel<N>)>)> = vec![(subst, Vec::new())];
+    for ((cg, cid), cp) in N::children_mut(&mut node).into_iter().zip(pat_args) {
+        for (subst, children) in std::mem::take(&mut out) {
+            for (sub_subst, sub_skel) in ematch_impl::<N>(*cid, cp, eg, subst) {
+                let mut children = children.clone();
+                children.push((cg.clone(), eg.uf.get_id_semilattice(*cid), sub_skel));
+                out.push((sub_subst, children));
+            }
         }
     }
+    let out = out.into_iter().map(|(subst, children)| (subst, Skel::Node(g_base.clone(), node.clone(), children.into_boxed_slice()))).collect();
     out
 }
 
@@ -75,6 +78,17 @@ fn clear_node<N: Analysis>(n: &N::L) -> N::L {
         *c = (N::G::identity(), Id(0));
     }
     n
+}
+
+/// impls ///
+
+impl<N: Analysis> Clone for Skel<N> {
+    fn clone(&self) -> Self {
+        match self {
+            Skel::PVar(id) => Skel::PVar(*id),
+            Skel::Node(g, n, children) => Skel::Node(g.clone(), n.clone(), children.clone()),
+        }
+    }
 }
 
 impl<N: Analysis> Clone for Pattern<N> {

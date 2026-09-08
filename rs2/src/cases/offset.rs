@@ -25,6 +25,7 @@ impl Group for Offset {
     }
 }
 
+#[derive(Clone)]
 struct ConstProp(Option<i64>);
 
 impl Semilattice for ConstProp {
