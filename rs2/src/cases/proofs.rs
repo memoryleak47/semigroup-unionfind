@@ -116,9 +116,9 @@ impl Analysis for ProofAnalysis {
     }
 
     fn ematch(eg: &EGraph<Self>, i: Id, pat: &Pattern<Self>) -> Vec<Subst<Self>> {
-        let (subst, _) = skeleton_ematch(eg, i, pat);
-        let subst = subst.into_iter().map(|(k, v)| (k, (mk_refl(), v))).collect();
-        vec![subst]
+        skeleton_ematch(eg, i, pat).into_iter().map(|(subst, _)| {
+            subst.into_iter().map(|(k, v)| (k, (mk_refl(), v))).collect()
+        }).collect()
     }
 }
 

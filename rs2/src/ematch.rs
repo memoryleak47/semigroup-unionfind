@@ -28,8 +28,53 @@ pub enum Skel<N: Analysis> {
 pub type SkelEdge<N: Analysis> = (N::G, N::S, Skel<N>);
 
 // Matches in the e-graph while disregarding the G annotations
-pub fn skeleton_ematch<N: Analysis>(eg: &EGraph<N>, i: Id, pat: &Pattern<N>) -> (HashMap<PVar, Id>, Skel<N>) {
+pub fn skeleton_ematch<N: Analysis>(eg: &EGraph<N>, id: Id, pat: &Pattern<N>) -> Vec<(HashMap<PVar, Id>, Skel<N>)> {
+    let _ = ematch_impl(id, pat, eg, HashMap::new());
     todo!()
+}
+
+fn ematch_impl<N: Analysis>(id: Id, pat: &Pattern<N>, eg: &EGraph<N>, subst: HashMap<PVar, Id>) -> Vec<HashMap<PVar, Id>> {
+    match pat {
+        Pattern::PVar(var) => {
+            let mut subst = subst;
+            if let Some(old_id) = subst.insert(*var, id) && id != old_id { return Vec::new() }
+            vec![subst]
+        },
+        Pattern::Node(pn, pargs) => {
+            let mut out = Vec::new();
+            for (g, n) in eg.nodes_of_bare(id) {
+                out.extend(ematch_node(&n, pn, pargs, eg, subst.clone()));
+            }
+            out
+        },
+        Pattern::G(..) => unimplemented!(),
+    }
+}
+
+fn ematch_node<N: Analysis>(node: &N::L, patnode: &N::L, pat_args: &[Pattern<N>], eg: &EGraph<N>, subst: HashMap<PVar, Id>) -> Vec<HashMap<PVar, Id>> {
+    if !matches::<N>(node, patnode) { return Vec::new() }
+
+    let mut node = node.clone();
+
+    let mut out = vec![subst];
+    for (c, cp) in N::children_mut(&mut node).into_iter().zip(pat_args) {
+        for subst in std::mem::take(&mut out) {
+            out.extend(ematch_impl::<N>(c.1, cp, eg, subst));
+        }
+    }
+    out
+}
+
+pub fn matches<N: Analysis>(n1: &N::L, n2: &N::L) -> bool {
+    clear_node::<N>(n1) == clear_node::<N>(n2)
+}
+
+fn clear_node<N: Analysis>(n: &N::L) -> N::L {
+    let mut n = n.clone();
+    for c in N::children_mut(&mut n) {
+        *c = (N::G::identity(), Id(0));
+    }
+    n
 }
 
 impl<N: Analysis> Clone for Pattern<N> {
