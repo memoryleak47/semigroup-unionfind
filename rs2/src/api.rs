@@ -12,7 +12,7 @@ pub trait Group: Clone + Eq + Debug + Hash + PartialEq {
 
 // Note: This Semilattice encodes a subgroup of G.
 // After all, self-edges are closed under composition and inversion.
-pub trait Semilattice: Clone {
+pub trait Semilattice: Clone + Debug {
     type G: Group;
 
     fn act(g: &Self::G, s: &Self) -> Self;

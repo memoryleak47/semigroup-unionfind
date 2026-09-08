@@ -13,6 +13,14 @@ pub enum Pattern<N: Analysis> {
     G(N::G, Box<Pattern<N>>),
 }
 
+pub fn ematch_all<N: Analysis>(eg: &EGraph<N>, pat: &Pattern<N>) -> Vec<Subst<N>> {
+    let mut vec = Vec::new();
+    for i in eg.classes() {
+        vec.extend(N::ematch(eg, i, pat));
+    }
+    vec
+}
+
 pub fn is_term<N: Analysis>(pat: &Pattern<N>) -> bool {
     match pat {
         Pattern::PVar(_) => false,

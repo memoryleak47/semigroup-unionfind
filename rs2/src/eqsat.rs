@@ -52,11 +52,7 @@ pub fn eqsat<N: Analysis>(eg: &mut EGraph<N>, rules: &[Rule<N>], mut hooks: Box<
 
         let mut matches = Vec::new();
         for (lhs, _) in rules.iter() {
-            let mut vec = Vec::new();
-            for i in eg.classes() {
-                vec.extend(N::ematch(eg, i, lhs));
-            }
-            matches.push(vec);
+            matches.push(ematch_all(eg, lhs));
             if let Err(stop) = check_limits(eg) { return stop }
         }
 
