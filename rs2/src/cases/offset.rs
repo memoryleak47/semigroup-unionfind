@@ -1,5 +1,7 @@
 use crate::*;
 
+use std::collections::BTreeMap;
+
 type Pat = Pattern<OffsetAnalysis>;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -139,10 +141,12 @@ impl Analysis for OffsetAnalysis {
     }
 
     fn ematch(eg: &EGraph<Self>, id: Id, pattern: &Pattern<Self>) -> Vec<Subst<Self>> {
-        let t = skeleton_ematch(eg, id, pattern);
-        dbg!(t);
+        skeleton_ematch(eg, id, pattern).into_iter().map(|(_, skel)| {
+            let mut out_subst = Subst::<OffsetAnalysis>::default();
+            let c = solve(&skel, pattern, &mut Vec::new(), &mut out_subst).is_some();
 
-        todo!()
+            Some(out_subst).into_iter().filter(move |_| c)
+        }).flatten().collect()
     }
 
     fn prettyprint(n: &Self::L, children: Box<[String]>) -> String {
@@ -162,6 +166,27 @@ impl Analysis for OffsetAnalysis {
             (OffsetLang::Symbol(s1),OffsetLang::Symbol(s2)) => s1 == s2,
             _ => false,
         }
+    }
+}
+
+type GVar = u32;
+
+struct SymOffset {
+    const_offset: i64,
+    coeffs: BTreeMap<GVar, i64>,
+}
+
+fn solve(skel: &Skel<OffsetAnalysis>, pat: &Pattern<OffsetAnalysis>, constraints: &mut Vec<SymOffset>, subst: &mut Subst<OffsetAnalysis>) -> Option<()> {
+    match (skel, pat) {
+        (Skel::PVar(id), Pattern::PVar(v)) => {
+            let g = todo!();
+            if let Some(old) = subst.insert(*v, (g.clone(), *id)) && old != (g, *id) { return None }
+            Some(())
+        },
+        (Skel::Node(skel_g, skel_node, skel_children), Pattern::Node(pat_node, pat_children)) => {
+            todo!()
+        },
+        _ => None,
     }
 }
 
