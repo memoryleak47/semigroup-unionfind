@@ -58,7 +58,7 @@ fn ematch_impl<N: Analysis>(id: Id, pat: &Pattern<N>, eg: &EGraph<N>, subst: Has
 }
 
 fn ematch_node<N: Analysis>(g_base: N::G, node: &N::L, patnode: &N::L, pat_args: &[Pattern<N>], eg: &EGraph<N>, subst: HashMap<PVar, Id>) -> Vec<(HashMap<PVar, Id>, Skel<N>)> {
-    if !matches::<N>(node, patnode) { return Vec::new() }
+    if !rough_matches::<N>(node, patnode, eg) { return Vec::new() }
 
     let mut node = node.clone();
 
@@ -76,16 +76,19 @@ fn ematch_node<N: Analysis>(g_base: N::G, node: &N::L, patnode: &N::L, pat_args:
     out
 }
 
-pub fn matches<N: Analysis>(n1: &N::L, n2: &N::L) -> bool {
-    clear_node::<N>(n1) == clear_node::<N>(n2)
+// checks that two nodes are equal, while ignoring
+// - children
+// - g*_ differences (via canon)
+pub fn rough_matches<N: Analysis>(n1: &N::L, n2: &N::L, eg: &EGraph<N>) -> bool {
+    clear_node::<N>(n1, eg) == clear_node::<N>(n2, eg)
 }
 
-fn clear_node<N: Analysis>(n: &N::L) -> N::L {
+fn clear_node<N: Analysis>(n: &N::L, eg: &EGraph<N>) -> Either<N::L, Id> {
     let mut n = n.clone();
     for c in N::children_mut(&mut n) {
         *c = (N::G::identity(), Id(0));
     }
-    n
+    N::canon(&n, &eg.uf).1
 }
 
 /// impls ///

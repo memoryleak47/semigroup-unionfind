@@ -22,6 +22,7 @@ pub trait Semilattice: Clone + Debug {
     fn contains_self_edge(&self, g: &Self::G) -> bool;
 }
 
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Either<L, R> {
     L(L),
     R(R),
