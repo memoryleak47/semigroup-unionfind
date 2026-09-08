@@ -21,6 +21,17 @@ pub fn is_term<N: Analysis>(pat: &Pattern<N>) -> bool {
     }
 }
 
+pub enum Skel<N: Analysis> {
+    PVar(Id),
+    Node(N::L, Box<[SkelEdge<N>]>),
+}
+pub type SkelEdge<N: Analysis> = (N::G, N::S, Skel<N>);
+
+// Matches in the e-graph while disregarding the G annotations
+pub fn skeleton_ematch<N: Analysis>(eg: &EGraph<N>) -> (HashMap<PVar, Id>, Skel<N>) {
+    todo!()
+}
+
 impl<N: Analysis> Clone for Pattern<N> {
     fn clone(&self) -> Self {
         match self {
