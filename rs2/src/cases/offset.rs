@@ -175,7 +175,7 @@ impl Analysis for OffsetAnalysis {
 // Skel::Node(N::G, N::L, Box<[(N::G, N::S, Skel<N>)]>),
 // gvars are pointers to this  |===================|
 // casted to usize, where the N::L is an add node.
-// A positive value of a GVar means how much gets propagated upwards.
+// A positive value of a GVar means how much gets propagated upwards in the skel.
 type GVar = usize;
 
 #[derive(Clone)]
@@ -193,7 +193,8 @@ fn record_constraints(in_g: SymOffset, skel: &Skel<OffsetAnalysis>, pat: &Patter
             }
         },
         (Skel::Node(skel_g, skel_node, skel_children), Pattern::Node(pat_node, pat_children)) => {
-            // TODO respect skel_g.
+            let in_g = in_g.add(&SymOffset::from_const(skel_g.0));
+
             if let (OffsetLang::Const(c1), OffsetLang::Const(c2)) = (skel_node, pat_node) {
                 constraints.push(in_g.add(&SymOffset::from_const(c1 - c2)));
                 return
