@@ -66,7 +66,7 @@ impl Semilattice for ConstProp {
 
 type OffsetId = (Offset, Id);
 
-#[derive(Hash, PartialEq, Eq, Clone, Copy)]
+#[derive(Hash, PartialEq, Eq, Clone, Copy, Debug)]
 enum OffsetLang {
     Add([OffsetId; 2]),
     Const(i64),
@@ -146,6 +146,7 @@ impl Analysis for OffsetAnalysis {
             let mut constraints = Vec::new();
             let in_g = SymOffset::from_gvar(0);
             record_constraints(in_g, &skel, pattern, &mut constraints, &mut out_subst);
+            dbg!(&constraints, &out_subst);
             let gsubst = solve(constraints)?;
             let out: Subst<Self> = out_subst.into_iter().map(|(k, (sym, id))| (k, (resolve(sym, &gsubst), id))).collect();
             Some(out)
@@ -178,7 +179,7 @@ impl Analysis for OffsetAnalysis {
 // A positive value of a GVar means how much gets propagated upwards in the skel.
 type GVar = usize;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct SymOffset {
     const_offset: i64,
     coeffs: BTreeMap<GVar, i64>,
@@ -345,6 +346,7 @@ fn test_offset_ematching2() {
 
     let pat = mk_app(mk_pvar("?x"), mk_pvar("?x"));
     eg.rebuild_nodes();
+    eg.dump();
 
     let matches = ematch_all::<OffsetAnalysis>(&eg, &pat);
     for x in &matches {
