@@ -307,7 +307,8 @@ fn mk_app(x: Pat, y: Pat) -> Pat {
 }
 
 #[test]
-fn test_offset_ematching() {
+// (app a b) matches (app a (add ?x 17)) via ?x = -17 + b
+fn test_offset_ematching1() {
     let mut eg: EGraph<OffsetAnalysis> = EGraph::new();
 
     add_expr(&mk_const(42), &mut eg);
@@ -327,4 +328,27 @@ fn test_offset_ematching() {
     assert_eq!(matches.len(), 1);
     let m = matches[0].clone();
     assert_eq!(m[&Symbol::from("?x")], (Offset(-17), b));
+}
+
+#[test]
+// (app (a-5) (a+5)) does not match (app ?x ?x)
+fn test_offset_ematching2() {
+    let mut eg: EGraph<OffsetAnalysis> = EGraph::new();
+
+    add_expr(&mk_const(0), &mut eg);
+
+    let ex = mk_app(
+           mk_add(mk_symbol("a"), mk_const(-5)),
+           mk_add(mk_symbol("a"), mk_const( 5))
+       );
+    let a = add_expr(&ex, &mut eg);
+
+    let pat = mk_app(mk_pvar("?x"), mk_pvar("?x"));
+    eg.rebuild_nodes();
+
+    let matches = ematch_all::<OffsetAnalysis>(&eg, &pat);
+    for x in &matches {
+        dbg!(x);
+    }
+    assert!(matches.is_empty());
 }
