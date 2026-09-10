@@ -210,6 +210,7 @@ fn record_constraints(in_g: SymOffset, skel: &Skel<OffsetAnalysis>, pat: &Patter
                     constr = constr.add(&gvar);
                     gvar
                 } else { SymOffset::zero() };
+                let gg = gg.add(&SymOffset::from_const(o.0));
                 record_constraints(gg, s, p, constraints, subst);
             }
             constraints.push(constr);
@@ -332,7 +333,7 @@ fn test_offset_ematching1() {
 }
 
 #[test]
-// (app (a-5) (a+5)) does not match (app ?x ?x)
+// (app (a-5) (a+5)) matches (app ?x (add ?x ?y))
 fn test_offset_ematching2() {
     let mut eg: EGraph<OffsetAnalysis> = EGraph::new();
 
@@ -344,7 +345,7 @@ fn test_offset_ematching2() {
        );
     let a = add_expr(&ex, &mut eg);
 
-    let pat = mk_app(mk_pvar("?x"), mk_pvar("?x"));
+    let pat = mk_app(mk_pvar("?x"), mk_add(mk_pvar("?x"), mk_pvar("?y")));
     eg.rebuild_nodes();
     eg.dump();
 
@@ -352,5 +353,7 @@ fn test_offset_ematching2() {
     for x in &matches {
         dbg!(x);
     }
-    assert!(matches.is_empty());
+    assert_eq!(matches.len(), 1);
+    let m = matches[0].clone();
+    assert!(false);
 }
