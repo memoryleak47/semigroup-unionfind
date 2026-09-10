@@ -355,5 +355,6 @@ fn test_offset_ematching2() {
     }
     assert_eq!(matches.len(), 1);
     let m = matches[0].clone();
-    assert!(false);
+    assert_eq!(m[&Symbol::from("?x")], (Offset(-5), Id(1)));
+    assert_eq!(m[&Symbol::from("?y")], (Offset(10), Id(0)));
 }
