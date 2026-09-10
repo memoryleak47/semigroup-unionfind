@@ -186,8 +186,10 @@ struct SymOffset {
     coeffs: BTreeMap<GVar, i64>,
 }
 
+// in_g * skel = pat
 fn record_constraints(in_g: SymOffset, skel: &Skel<OffsetAnalysis>, pat: &Pattern<OffsetAnalysis>, constraints: &mut Vec<SymOffset>, subst: &mut HashMap<PVar, (SymOffset, Id)>) {
     match (skel, pat) {
+        // in_g * id = ?a
         (Skel::PVar(id), Pattern::PVar(v)) => {
             if let Some((old_g, old_id)) = subst.insert(*v, (in_g.clone(), *id)) {
                 assert_eq!(*id, old_id);
@@ -196,25 +198,39 @@ fn record_constraints(in_g: SymOffset, skel: &Skel<OffsetAnalysis>, pat: &Patter
         },
         (Skel::Node(skel_g, skel_node, skel_children), Pattern::Node(pat_node, pat_children)) => {
             let in_g = in_g.add(&SymOffset::from_const(skel_g.0));
+            match (skel_node, pat_node) {
+                // in_g * skel_c = pat_c
+                (OffsetLang::Const(skel_c), OffsetLang::Const(pat_c)) => constraints.push(in_g.add(&SymOffset::from_const(skel_c - pat_c))),
 
-            if let (OffsetLang::Const(c1), OffsetLang::Const(c2)) = (skel_node, pat_node) {
-                constraints.push(in_g.add(&SymOffset::from_const(c1 - c2)));
-                return
-            }
+                // in_g * a = a
+                (OffsetLang::Symbol(..), OffsetLang::Symbol(..)) => constraints.push(in_g),
 
-            let mut constr = in_g;
-            for (triple, p) in skel_children.iter().zip(pat_children.iter()) {
-                let (o, _, s) = triple;
-                let gg = if matches!(skel_node, OffsetLang::Add(..)) {
-                    let gvar = triple as *const _ as usize;
-                    let gvar = SymOffset::from_gvar(gvar);
-                    constr = constr.add(&gvar);
-                    gvar
-                } else { SymOffset::zero() };
-                let gg = gg.add(&SymOffset::from_const(o.0));
-                record_constraints(gg, s, p, constraints, subst);
+                // in_g * (app (ol*l) (or*r)) = (app patl patr)
+                (OffsetLang::App(..), OffsetLang::App(..)) => {
+                    constraints.push(in_g);
+
+                    for ((o, _, s), p) in skel_children.iter().zip(pat_children.iter()) {
+                        let o = SymOffset::from_const(o.0);
+                        record_constraints(o, s, p, constraints, subst);
+                    }
+                },
+
+                // in_g * (add (ol*l) (or*r)) = (add patl patr)
+                (OffsetLang::Add(..), OffsetLang::Add(..)) => {
+                    let mut constr = in_g;
+                    for (triple, p) in skel_children.iter().zip(pat_children.iter()) {
+                        let (o, _, s) = triple;
+                        let gvar = triple as *const _ as usize;
+                        let gvar = SymOffset::from_gvar(gvar);
+                        constr = constr.add(&gvar);
+
+                        let gg = gvar.scale(-1).add(&SymOffset::from_const(o.0));
+                        record_constraints(gg, s, p, constraints, subst);
+                    }
+                    constraints.push(constr);
+                },
+                _ => unreachable!(),
             }
-            constraints.push(constr);
         },
         _ => {},
     }
