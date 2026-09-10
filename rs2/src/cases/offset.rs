@@ -141,12 +141,15 @@ impl Analysis for OffsetAnalysis {
     }
 
     fn ematch(eg: &EGraph<Self>, id: Id, pattern: &Pattern<Self>) -> Vec<Subst<Self>> {
-        skeleton_ematch(eg, id, pattern).into_iter().map(|(_, skel)| {
-            let mut out_subst = Subst::<OffsetAnalysis>::default();
-            let c = solve(&skel, pattern, &mut Vec::new(), &mut out_subst).is_some();
-
-            Some(out_subst).into_iter().filter(move |_| c)
-        }).flatten().collect()
+        skeleton_ematch(eg, id, pattern).into_iter().flat_map(|(_, skel)| {
+            let mut out_subst = HashMap::new();
+            let mut constraints = Vec::new();
+            let in_g = SymOffset::from_gvar(0);
+            record_constraints(in_g, &skel, pattern, &mut constraints, &mut out_subst);
+            let gsubst = solve(constraints)?;
+            let out: Subst<Self> = out_subst.into_iter().map(|(k, (sym, id))| (k, (resolve(sym, &gsubst), id))).collect();
+            Some(out)
+        }).collect::<Vec<Subst<Self>>>()
     }
 
     fn prettyprint(n: &Self::L, children: Box<[String]>) -> String {
@@ -169,28 +172,117 @@ impl Analysis for OffsetAnalysis {
     }
 }
 
-type GVar = u32;
+// Skel::Node(N::G, N::L, Box<[(N::G, N::S, Skel<N>)]>),
+// gvars are pointers to this  |===================|
+// casted to usize, where the N::L is an add node.
+// A positive value of a GVar means how much gets propagated upwards.
+type GVar = usize;
 
+#[derive(Clone)]
 struct SymOffset {
     const_offset: i64,
     coeffs: BTreeMap<GVar, i64>,
 }
 
-fn solve(skel: &Skel<OffsetAnalysis>, pat: &Pattern<OffsetAnalysis>, constraints: &mut Vec<SymOffset>, subst: &mut Subst<OffsetAnalysis>) -> Option<()> {
+fn record_constraints(in_g: SymOffset, skel: &Skel<OffsetAnalysis>, pat: &Pattern<OffsetAnalysis>, constraints: &mut Vec<SymOffset>, subst: &mut HashMap<PVar, (SymOffset, Id)>) {
     match (skel, pat) {
         (Skel::PVar(id), Pattern::PVar(v)) => {
-            let g = todo!();
-            if let Some(old) = subst.insert(*v, (g.clone(), *id)) && old != (g, *id) { return None }
-            Some(())
+            if let Some((old_g, old_id)) = subst.insert(*v, (in_g.clone(), *id)) {
+                assert_eq!(*id, old_id);
+                constraints.push(old_g.scale(-1).add(&in_g));
+            }
         },
         (Skel::Node(skel_g, skel_node, skel_children), Pattern::Node(pat_node, pat_children)) => {
-            for ((o, _, s), p) in skel_children.iter().zip(pat_children.iter()) {
-                solve(s, p, constraints, subst)?;
+            // TODO respect skel_g.
+            if let (OffsetLang::Const(c1), OffsetLang::Const(c2)) = (skel_node, pat_node) {
+                constraints.push(in_g.add(&SymOffset::from_const(c1 - c2)));
+                return
             }
-            Some(())
+
+            let mut constr = in_g;
+            for (triple, p) in skel_children.iter().zip(pat_children.iter()) {
+                let (o, _, s) = triple;
+                let gg = if matches!(skel_node, OffsetLang::Add(..)) {
+                    let gvar = triple as *const _ as usize;
+                    let gvar = SymOffset::from_gvar(gvar);
+                    constr = constr.add(&gvar);
+                    gvar
+                } else { SymOffset::zero() };
+                record_constraints(gg, s, p, constraints, subst);
+            }
+            constraints.push(constr);
         },
-        _ => None,
+        _ => {},
     }
+}
+
+fn solve(constraints: Vec<SymOffset>) -> Option<HashMap<GVar, SymOffset>> {
+    let mut gsubst: HashMap<GVar, SymOffset> = HashMap::new();
+    for c in constraints {
+        let mut c = simplify(c, &gsubst);
+        if let Some((var, coef)) = c.coeffs.pop_last() {
+            c = c.scale(-coef); // TODO shouldn't it be -1/coef effectively?
+            gsubst.insert(var, c);
+        } else if c.const_offset != 0 { return None }
+    }
+    Some(gsubst)
+}
+
+impl SymOffset {
+    pub fn zero() -> SymOffset {
+        Self::from_const(0)
+    }
+
+    pub fn from_const(c: i64) -> SymOffset {
+        SymOffset {
+            const_offset: c,
+            coeffs: Default::default(),
+        }
+    }
+
+    pub fn from_gvar(g: GVar) -> SymOffset {
+        SymOffset {
+            const_offset: 0,
+            coeffs: std::iter::once((g, 1)).collect(),
+        }
+    }
+
+    pub fn scale(&self, factor: i64) -> SymOffset {
+        let mut out = self.clone();
+        if factor == 0 {
+            out.const_offset = 0;
+            out.coeffs.clear();
+        } else {
+            out.const_offset *= factor;
+            out.coeffs.iter_mut().for_each(|(_, c)| *c *= factor);
+        }
+        out
+    }
+
+    pub fn add(&self, other: &Self) -> Self {
+        let mut out = self.clone();
+        out.const_offset += other.const_offset;
+        for (var, coef) in &other.coeffs {
+            let entry = out.coeffs.entry(*var).or_default();
+            *entry += coef;
+            if *entry == 0 {
+                out.coeffs.remove(var);
+            }
+        }
+        out
+    }
+}
+
+fn simplify(mut sym: SymOffset, gsubst: &HashMap<GVar, SymOffset>) -> SymOffset {
+    for (var, val) in gsubst {
+        let coef = sym.coeffs.remove(&var).unwrap_or(0);
+        sym = sym.add(&val.scale(coef));
+    }
+    sym
+}
+
+fn resolve(s: SymOffset, gsubst: &HashMap<GVar, SymOffset>) -> Offset {
+    Offset(simplify(s, &gsubst).const_offset)
 }
 
 fn mk_pvar(x: &str) -> Pat { Pattern::PVar(Symbol::new(x)) }
