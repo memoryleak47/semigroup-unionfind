@@ -148,6 +148,7 @@ impl Analysis for OffsetAnalysis {
             record_constraints(in_g, &skel, pattern, &mut constraints, &mut out_subst);
             dbg!(&constraints, &out_subst);
             let gsubst = solve(constraints)?;
+            dbg!(&gsubst);
             let out: Subst<Self> = out_subst.into_iter().map(|(k, (sym, id))| (k, (resolve(sym, &gsubst), id))).collect();
             Some(out)
         }).collect::<Vec<Subst<Self>>>()
@@ -224,7 +225,7 @@ fn solve(constraints: Vec<SymOffset>) -> Option<HashMap<GVar, SymOffset>> {
     for c in constraints {
         let mut c = simplify(c, &gsubst);
         if let Some((var, coef)) = c.coeffs.pop_last() {
-            c = c.scale(-coef); // TODO shouldn't it be -1/coef effectively?
+            c = c.try_div(-coef)?;
             gsubst.insert(var, c);
         } else if c.const_offset != 0 { return None }
     }
@@ -262,6 +263,15 @@ impl SymOffset {
         out
     }
 
+    pub fn try_div(&self, divisor: i64) -> Option<SymOffset> {
+        let mut out = self.clone();
+        for f in std::iter::once(&mut out.const_offset).chain(out.coeffs.iter_mut().map(|(k, v)| v)) {
+            if *f % divisor != 0 { return None } // isn't this return to pessimistic?
+            *f /= divisor;
+        }
+        Some(out)
+    }
+
     pub fn add(&self, other: &Self) -> Self {
         let mut out = self.clone();
         out.const_offset += other.const_offset;
@@ -277,9 +287,15 @@ impl SymOffset {
 }
 
 fn simplify(mut sym: SymOffset, gsubst: &HashMap<GVar, SymOffset>) -> SymOffset {
-    for (var, val) in gsubst {
-        let coef = sym.coeffs.remove(&var).unwrap_or(0);
-        sym = sym.add(&val.scale(coef));
+    'l: loop {
+        let mut did_a_thing = false;
+        for (var, val) in gsubst {
+            if let Some(coef) = sym.coeffs.remove(&var) {
+                sym = sym.add(&val.scale(coef));
+                did_a_thing = true;
+            }
+        }
+        if !did_a_thing { break }
     }
     sym
 }
@@ -357,4 +373,24 @@ fn test_offset_ematching2() {
     let m = matches[0].clone();
     assert_eq!(m[&Symbol::from("?x")], (Offset(-5), Id(1)));
     assert_eq!(m[&Symbol::from("?y")], (Offset(10), Id(0)));
+}
+
+#[test]
+// (app a 20) matches (app a (?x + ?x))
+fn test_offset_ematching3() {
+    let mut eg: EGraph<OffsetAnalysis> = EGraph::new();
+
+    add_expr(&mk_const(0), &mut eg);
+    add_expr(&mk_app(mk_symbol("a"), mk_const(20)), &mut eg);
+    let pat = mk_app(mk_symbol("a"), mk_add(mk_pvar("?x"), mk_pvar("?x")));
+    eg.rebuild_nodes();
+    eg.dump();
+
+    let matches = ematch_all::<OffsetAnalysis>(&eg, &pat);
+    for x in &matches {
+        dbg!(x);
+    }
+    assert_eq!(matches.len(), 1);
+    let m = matches[0].clone();
+    assert_eq!(m[&Symbol::from("?x")], (Offset(10), Id(0)));
 }
