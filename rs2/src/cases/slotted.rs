@@ -247,6 +247,22 @@ impl Analysis for Slotted {
             SlottedLang::Sym(s) => s.to_string(),
         }
     }
+
+    fn matches(n1: &SlottedLang, n2: &SlottedLang) -> bool {
+        match (n1, n2) {
+            (SlottedLang::Lam(..),SlottedLang::Lam(..)) => true,
+            (SlottedLang::App(..),SlottedLang::App(..)) => true,
+            (SlottedLang::Var(..),SlottedLang::Var(..)) => true,
+            (SlottedLang::Sym(s1),SlottedLang::Sym(s2)) => s1 == s2,
+            _ => false,
+        }
+    }
+
+    fn ematch(eg: &EGraph<Self>, id: Id, pattern: &Pattern<Self>) -> Vec<Subst<Self>> {
+        skeleton_ematch(eg, id, pattern).into_iter().map(|(x, y)| {
+            x.into_iter().map(|(k, v)| (k, (SlotMap::identity(), v))).collect()
+        }).collect()
+    }
 }
 
 fn complete(mut d: HashMap<Slot, Slot>) -> SlotMap {
