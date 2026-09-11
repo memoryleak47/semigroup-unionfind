@@ -315,7 +315,12 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, subst: 
         (Skel::Node(g_skel, SlottedLang::App(..), skel_children), Pattern::Node(SlottedLang::App(..), pat_children))
        |(Skel::Node(g_skel, SlottedLang::Lam(..), skel_children), Pattern::Node(SlottedLang::Lam(..), pat_children)) => {
             // g * g_skel * (app g0*c0 g1*c1) = (app p0 p1)
-            todo!()
+            for i in 0..2 {
+                let (cg, cs, subskel) = &skel_children[i];
+                let rec = SlotMap::compose(&SlotMap::compose(&g, &g_skel), &cg);
+                ematch_impl(rec, subskel, &pat_children[i], subst)?;
+            }
+            Some(())
         },
         _ => unreachable!(),
     }
