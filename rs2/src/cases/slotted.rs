@@ -326,3 +326,23 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, subst: 
         _ => unreachable!(),
     }
 }
+
+type Pat = Pattern<Slotted>;
+fn nil() -> (SlotMap, Id) { (SlotMap::identity(), Id(0)) }
+fn mk_lam(p1: Pat, p2: Pat) -> Pat { Pattern::Node(SlottedLang::Lam(nil(), nil()), Box::new([p1, p2])) }
+fn mk_app(p1: Pat, p2: Pat) -> Pat { Pattern::Node(SlottedLang::App(nil(), nil()), Box::new([p1, p2])) }
+
+fn mk_sym(s: &str) -> Pat { Pattern::Node(SlottedLang::Sym(Symbol::new(s)), Box::new([])) }
+fn mk_var(s: Slot) -> Pat { Pattern::Node(SlottedLang::Var(s), Box::new([])) }
+fn mk_pvar(s: &str) -> Pat { Pattern::PVar(Symbol::new(s)) }
+
+#[test]
+// (app (var $x) (var $y)) matches (app ?x ?y)
+fn slotted_ematching_test() {
+    let mut eg: EGraph<Slotted> = EGraph::new();
+    add_expr(&mk_app(mk_var(3), mk_var(4)), &mut eg);
+    eg.rebuild_nodes();
+    let pat = mk_app(mk_pvar("?x"), mk_pvar("?y"));
+    let matches = ematch_all(&eg, &pat);
+    assert_eq!(matches.len(), 1);
+}
