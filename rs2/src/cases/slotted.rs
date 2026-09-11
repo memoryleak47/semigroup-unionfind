@@ -259,8 +259,9 @@ impl Analysis for Slotted {
     }
 
     fn ematch(eg: &EGraph<Self>, id: Id, pattern: &Pattern<Self>) -> Vec<Subst<Self>> {
-        skeleton_ematch(eg, id, pattern).into_iter().map(|(x, y)| {
-            x.into_iter().map(|(k, v)| (k, (SlotMap::identity(), v))).collect()
+        skeleton_ematch(eg, id, pattern).into_iter().map(|(_, skel)| {
+            ematch_impl(&skel, pattern);
+            todo!()
         }).collect()
     }
 }
@@ -289,4 +290,12 @@ fn canon((m, x): (SlotMap, Id), uf: &Unionfind<SlottedData>) -> SlotMap {
     let slots = &uf.get_leader_semilattice(x).slots;
     let m2 = m.iter().filter(|(a, b)| slots.contains(a)).collect();
     complete(m2)
+}
+
+/// ematching ///
+
+fn ematch_impl(skel: &Skel<Slotted>, pat: &Pattern<Slotted>) {
+    match (skel, pat) {
+        _ => todo!(),
+    }
 }
