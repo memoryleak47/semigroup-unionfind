@@ -261,7 +261,7 @@ impl Analysis for Slotted {
     fn ematch(eg: &EGraph<Self>, id: Id, pattern: &Pattern<Self>) -> Vec<Subst<Self>> {
         skeleton_ematch(eg, id, pattern).into_iter().filter_map(|(_, skel)| {
             let mut subst = Subst::<Self>::new();
-            ematch_impl(SlotMap::identity(), &skel, pattern, &mut subst).map(|_| subst)
+            ematch_impl(SlotMap::identity(), &skel, pattern, &mut subst, eg).map(|_| subst)
         }).collect()
     }
 }
@@ -295,13 +295,14 @@ fn canon((m, x): (SlotMap, Id), uf: &Unionfind<SlottedData>) -> SlotMap {
 /// ematching ///
 
 // g * skel = pat
-fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, subst: &mut Subst<Slotted>) -> Option<()> {
+fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, subst: &mut Subst<Slotted>, eg: &EGraph<Slotted>) -> Option<()> {
     use SlottedLang::*;
     match (skel, pat) {
         (Skel::PVar(id), Pattern::PVar(v)) => {
-            if let Some((old_g, old_id)) = subst.insert(*v, (g.clone(), *id)) {
-                assert_eq!(*id, old_id);
-                // TODO equate old_g*id = g*id.
+            let new = (g.clone(), *id);
+            if let Some(old) = subst.insert(*v, new.clone()) {
+                // TODO this requires slot merging later on.
+                if !eg.is_equal(old, new) { return None }
             }
             Some(())
         },
@@ -318,7 +319,7 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, subst: 
             for i in 0..2 {
                 let (cg, cs, subskel) = &skel_children[i];
                 let rec = SlotMap::compose(&SlotMap::compose(&g, &g_skel), &cg);
-                ematch_impl(rec, subskel, &pat_children[i], subst)?;
+                ematch_impl(rec, subskel, &pat_children[i], subst, eg)?;
             }
             Some(())
         },
