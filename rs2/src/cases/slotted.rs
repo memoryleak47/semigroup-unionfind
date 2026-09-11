@@ -259,9 +259,9 @@ impl Analysis for Slotted {
     }
 
     fn ematch(eg: &EGraph<Self>, id: Id, pattern: &Pattern<Self>) -> Vec<Subst<Self>> {
-        skeleton_ematch(eg, id, pattern).into_iter().map(|(_, skel)| {
-            ematch_impl(&skel, pattern);
-            todo!()
+        skeleton_ematch(eg, id, pattern).into_iter().filter_map(|(_, skel)| {
+            let mut subst = Subst::<Self>::new();
+            ematch_impl(SlotMap::identity(), &skel, pattern, &mut subst).map(|_| subst)
         }).collect()
     }
 }
@@ -294,8 +294,29 @@ fn canon((m, x): (SlotMap, Id), uf: &Unionfind<SlottedData>) -> SlotMap {
 
 /// ematching ///
 
-fn ematch_impl(skel: &Skel<Slotted>, pat: &Pattern<Slotted>) {
+// g * skel = pat
+fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, subst: &mut Subst<Slotted>) -> Option<()> {
+    use SlottedLang::*;
     match (skel, pat) {
-        _ => todo!(),
+        (Skel::PVar(id), Pattern::PVar(v)) => {
+            if let Some((old_g, old_id)) = subst.insert(*v, (g.clone(), *id)) {
+                assert_eq!(*id, old_id);
+                // TODO equate old_g*id = g*id.
+            }
+            Some(())
+        },
+
+        (Skel::Node(_, SlottedLang::Sym(_), _), Pattern::Node(SlottedLang::Sym(_), _)) => Some(()),
+
+        (Skel::Node(_, SlottedLang::Var(v0), _), Pattern::Node(SlottedLang::Var(v1), _)) => {
+            todo!() // TODO slot union g*v0 = v1.
+        },
+
+        (Skel::Node(g_skel, SlottedLang::App(..), skel_children), Pattern::Node(SlottedLang::App(..), pat_children))
+       |(Skel::Node(g_skel, SlottedLang::Lam(..), skel_children), Pattern::Node(SlottedLang::Lam(..), pat_children)) => {
+            // g * g_skel * (app g0*c0 g1*c1) = (app p0 p1)
+            todo!()
+        },
+        _ => unreachable!(),
     }
 }
