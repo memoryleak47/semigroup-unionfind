@@ -695,6 +695,33 @@ fn slotted_ematching_test9() {
     assert_eq!(matches.len(), 2);
 }
 
+#[test]
+fn slotted_ematching_test10() {
+    let mut eg: EGraph<Slotted> = EGraph::new();
+    // here we test symmetries.
+    let a = add_expr(&mk_app(mk_var(2), mk_var(3)), &mut eg);
+    let b = add_expr(&mk_app(mk_var(3), mk_var(2)), &mut eg);
+    eg.union(a, b);
+
+    add_expr(&
+        mk_app(
+            mk_app(mk_var(1), mk_var(2)),
+            mk_app(mk_var(1), mk_var(2))
+        ),
+    &mut eg);
+    eg.rebuild_nodes();
+
+    let pat =
+        mk_app(
+            mk_app(mk_pvar("?a"), mk_pvar("?b")),
+            mk_app(mk_pvar("?b"), mk_pvar("?a"))
+        );
+
+    let matches = ematch_all(&eg, &pat);
+    dbg!(&matches);
+    assert!(matches.len() > 0);
+}
+
 
 // For now, the user isn't allowed to use explicit slots >= 10_000.
 use std::sync::atomic::{AtomicUsize, Ordering};
