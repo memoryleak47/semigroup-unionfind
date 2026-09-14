@@ -374,32 +374,26 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: 
             let slots = exposed_slots(&node, &skel_children);
             add_diseqs(&slots, &mut state);
 
-            let mut accum = Vec::new();
-            for skel_children in branch_nodes(skel_children) {
-                let mut node = node.clone();
-                let mut state = state.clone();
-                accum.extend(match (node, pat_node) {
-                    (SlottedLang::Sym(_), SlottedLang::Sym(_)) => vec![state],
+            match (node, pat_node) {
+                (SlottedLang::Sym(_), SlottedLang::Sym(_)) => vec![state],
 
-                    (SlottedLang::Var(v0), SlottedLang::Var(v1)) => slot_unify(v0, *v1, &state).into_iter().collect(),
+                (SlottedLang::Var(v0), SlottedLang::Var(v1)) => slot_unify(v0, *v1, &state).into_iter().collect(),
 
-                    (SlottedLang::App(..), SlottedLang::App(..))
-                   |(SlottedLang::Lam(..), SlottedLang::Lam(..)) => {
-                        // (app g0*c0 g1*c1) = (app p0 p1)
-
-                        let mut out = Vec::new();
-
-                        let (cg, cs, subskel) = &skel_children[0];
-                        for state2 in ematch_impl(cg.clone(), subskel, &pat_children[0], &cs.slots, eg, state) {
-                            let (cg, cs, subskel) = &skel_children[1];
-                            out.extend(ematch_impl(cg.clone(), subskel, &pat_children[1], &cs.slots, eg, state2));
+                (SlottedLang::App(..), SlottedLang::App(..))
+               |(SlottedLang::Lam(..), SlottedLang::Lam(..)) => {
+                    // (app g0*c0 g1*c1) = (app p0 p1)
+                    let mut out = Vec::new();
+                    for (cg0, cg1) in branch_nodes(&skel_children) {
+                        let (_, cs, subskel) = &skel_children[0];
+                        for state2 in ematch_impl(cg0, subskel, &pat_children[0], &cs.slots, eg, state.clone()) {
+                            let (_, cs, subskel) = &skel_children[1];
+                            out.extend(ematch_impl(cg1.clone(), subskel, &pat_children[1], &cs.slots, eg, state2));
                         }
-                        out
-                    },
-                    _ => unreachable!(),
-                });
+                    }
+                    out
+                },
+                _ => unreachable!(),
             }
-            accum
         },
         _ => unreachable!(),
     }
@@ -407,8 +401,8 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: 
 
 type SkelChildren = Box<[(SlotMap, SlottedData, Skel<Slotted>)]>;
 
-fn branch_nodes(skel_children: SkelChildren) -> Vec<SkelChildren> {
-    if skel_children.is_empty() { return vec![skel_children] }
+fn branch_nodes(skel_children: &SkelChildren) -> Vec<(SlotMap, SlotMap)> {
+    if skel_children.is_empty() { return Vec::new() }
     assert_eq!(skel_children.len(), 2);
 
     let (g0, s0, ch0) = &skel_children[0];
@@ -417,12 +411,10 @@ fn branch_nodes(skel_children: SkelChildren) -> Vec<SkelChildren> {
     let group1 = &s1.group;
     let mut out = Vec::new();
     for gg0 in group0.iter() {
-        let ggg0 = SlotMap::compose(g0, gg0);
+        let cg0 = SlotMap::compose(g0, gg0);
         for gg1 in group1.iter() {
-            let ggg1 = SlotMap::compose(g1, gg1);
-            out.push(vec![
-                (ggg0.clone(), s0.clone(), ch0.clone()), (ggg1, s1.clone(), ch1.clone())
-            ].into_boxed_slice());
+            let cg1 = SlotMap::compose(g1, gg1);
+            out.push((cg0.clone(), cg1));
         }
     }
     out
