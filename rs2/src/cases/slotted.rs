@@ -358,7 +358,8 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: 
             let mut skel_children = skel_children.clone();
             apply_slotmap(effective_g.clone(), &mut node, &mut skel_children);
 
-            refresh(&mut node, &mut *skel_children, slots);
+            let effective_slots: HashSet<Slot> = slots.iter().map(|x| effective_g.get(*x)).collect();
+            refresh(&mut node, &mut *skel_children, &effective_slots);
 
             match (node, pat_node) {
                 (SlottedLang::Sym(_), SlottedLang::Sym(_)) => Some(()),
