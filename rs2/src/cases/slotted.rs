@@ -267,10 +267,7 @@ impl Analysis for Slotted {
             pat_slots(pattern, &mut pslots);
 
             let mut diseqs: HashMap<Slot, HashSet<Slot>> = HashMap::new();
-            for &p1 in &pslots {
-                let entry = diseqs.entry(p1).or_default();
-                entry.extend(pslots.iter().filter(|a| **a != p1));
-            }
+            add_diseqs(&pslots, &mut diseqs);
 
             ematch_impl(SlotMap::identity(), &skel, pattern, slots, &mut subst, eg, &mut Default::default(), &mut diseqs).map(|_| subst)
         }).collect()
@@ -340,6 +337,13 @@ fn refresh(n: &mut SlottedLang, children: &mut [(SlotMap, SlottedData, Skel<Slot
     apply_slotmap(m, n, children);
 }
 
+fn add_diseqs(slots: &HashSet<Slot>, diseqs: &mut HashMap<Slot, HashSet<Slot>>) {
+    for &x in slots {
+        let entry = diseqs.entry(x).or_default();
+        entry.extend(slots.iter().filter(|a| **a != x));
+    }
+}
+
 // g * skel = pat
 fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: &HashSet<Slot>, subst: &mut Subst<Slotted>, eg: &EGraph<Slotted>, slot_uf: &mut HashMap<Slot, Slot>, diseqs: &mut HashMap<Slot, HashSet<Slot>>) -> Option<()> {
     use SlottedLang::*;
@@ -360,6 +364,9 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: 
 
             let effective_slots: HashSet<Slot> = slots.iter().map(|x| effective_g.get(*x)).collect();
             refresh(&mut node, &mut *skel_children, &effective_slots);
+
+            let slots = exposed_slots(&node, &skel_children);
+            add_diseqs(&slots, diseqs);
 
             match (node, pat_node) {
                 (SlottedLang::Sym(_), SlottedLang::Sym(_)) => Some(()),
@@ -454,6 +461,20 @@ fn slotted_ematching_test3() {
     eg.rebuild_nodes();
 
     let pat = mk_lam(mk_var(10), mk_var(11));
+
+    let matches = ematch_all(&eg, &pat);
+    assert_eq!(matches.len(), 0);
+}
+
+#[test]
+fn slotted_ematching_test4() {
+    let mut eg: EGraph<Slotted> = EGraph::new();
+    let a = add_expr(&
+        mk_lam(mk_var(3), mk_var(4)),
+        &mut eg);
+    eg.rebuild_nodes();
+
+    let pat = mk_lam(mk_var(10), mk_var(10));
 
     let matches = ematch_all(&eg, &pat);
     assert_eq!(matches.len(), 0);
