@@ -261,7 +261,8 @@ impl Analysis for Slotted {
     fn ematch(eg: &EGraph<Self>, id: Id, pattern: &Pattern<Self>) -> Vec<Subst<Self>> {
         skeleton_ematch(eg, id, pattern).into_iter().filter_map(|(_, skel)| {
             let mut subst = Subst::<Self>::new();
-            ematch_impl(SlotMap::identity(), &skel, pattern, &mut subst, eg).map(|_| subst)
+            let slots = &eg.uf.get_id_semilattice(id).slots;
+            ematch_impl(SlotMap::identity(), &skel, pattern, slots, &mut subst, eg).map(|_| subst)
         }).collect()
     }
 }
@@ -294,8 +295,33 @@ fn canon((m, x): (SlotMap, Id), uf: &Unionfind<SlottedData>) -> SlotMap {
 
 /// ematching ///
 
+fn exposed_slots(n: &SlottedLang, children: &[(SlotMap, SlottedData, Skel<Slotted>)]) -> HashSet<Slot> {
+    if let SlottedLang::Var(v) = n { return std::iter::once(*v).collect() }
+    children.iter().flat_map(|(g, s, _)|
+        s.slots.iter().map(|x| g.get(*x))
+    ).collect()
+}
+
+fn apply_slotmap(m: SlotMap, n: &mut SlottedLang, children: &mut [(SlotMap, SlottedData, Skel<Slotted>)]) {
+    if let SlottedLang::Var(v) = n { *n = SlottedLang::Var(m.get(*v)); }
+    children.iter_mut().for_each(|(m2, _, _)| {
+        *m2 = SlotMap::compose(&m, m2);
+    });
+}
+
+// makes redundant slots fresh.
+fn refresh(n: &mut SlottedLang, children: &mut [(SlotMap, SlottedData, Skel<Slotted>)], slots: &HashSet<Slot>) {
+    let exposed = exposed_slots(n, children);
+    let redundant = &exposed - slots;
+    let fresh = 10_000..;
+    assert!(redundant.iter().all(|x| *x < 10_000));
+    let it: Vec<(Slot, Slot)> = redundant.into_iter().zip(fresh).collect();
+    let m = SlotMap::mk(it.iter().copied().chain(it.iter().map(|(x, y)| (*y, *x))));
+    apply_slotmap(m, n, children);
+}
+
 // g * skel = pat
-fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, subst: &mut Subst<Slotted>, eg: &EGraph<Slotted>) -> Option<()> {
+fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: &HashSet<Slot>, subst: &mut Subst<Slotted>, eg: &EGraph<Slotted>) -> Option<()> {
     use SlottedLang::*;
     match (skel, pat) {
         (Skel::PVar(id), Pattern::PVar(v)) => {
@@ -307,6 +333,9 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, subst: 
             Some(())
         },
         (Skel::Node(g_skel, node, skel_children), Pattern::Node(pat_node, pat_children)) => {
+            let mut node = node.clone();
+            let mut skel_children = skel_children.clone();
+            refresh(&mut node, &mut *skel_children, slots);
             match (node, pat_node) {
                 (SlottedLang::Sym(_), SlottedLang::Sym(_)) => Some(()),
                 (SlottedLang::Var(v0), SlottedLang::Var(v1)) => {
@@ -319,7 +348,7 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, subst: 
                     for i in 0..2 {
                         let (cg, cs, subskel) = &skel_children[i];
                         let rec = SlotMap::compose(&SlotMap::compose(&g, &g_skel), &cg);
-                        ematch_impl(rec, subskel, &pat_children[i], subst, eg)?;
+                        ematch_impl(rec, subskel, &pat_children[i], &cs.slots, subst, eg)?;
                     }
                     Some(())
                 },
@@ -346,6 +375,24 @@ fn slotted_ematching_test() {
     add_expr(&mk_app(mk_var(3), mk_var(4)), &mut eg);
     eg.rebuild_nodes();
     let pat = mk_app(mk_pvar("?x"), mk_pvar("?y"));
+    let matches = ematch_all(&eg, &pat);
+    assert_eq!(matches.len(), 1);
+}
+
+#[test]
+// (app (var $x) (var $y)) matches (app ?x ?y)
+fn slotted_ematching_test2() {
+    let mut eg: EGraph<Slotted> = EGraph::new();
+    let a = add_expr(&
+        mk_app(mk_lam(mk_var(3), mk_var(3)),
+            mk_lam(mk_var(3), mk_var(3))),
+        &mut eg);
+    eg.rebuild_nodes();
+
+    let pat =
+        mk_app(mk_lam(mk_var(2), mk_var(2)),
+            mk_lam(mk_var(4), mk_var(4)));
+
     let matches = ematch_all(&eg, &pat);
     assert_eq!(matches.len(), 1);
 }
