@@ -259,7 +259,8 @@ impl Analysis for Slotted {
     }
 
     fn ematch(eg: &EGraph<Self>, id: Id, pattern: &Pattern<Self>) -> Vec<Subst<Self>> {
-        skeleton_ematch(eg, id, pattern).into_iter().flat_map(|(_, skel)| {
+        let mut out = Vec::new();
+        for (_, skel) in skeleton_ematch(eg, id, pattern) {
             let slots = &eg.uf.get_id_semilattice(id).slots;
 
             let mut pslots = HashSet::new();
@@ -268,9 +269,37 @@ impl Analysis for Slotted {
             let mut state = State::default();
             add_diseqs(&pslots, &mut state);
 
-            ematch_impl(SlotMap::identity(), &skel, pattern, slots, eg, state).into_iter().map(|state| state.subst)
-        }).collect()
+            for st in ematch_impl(SlotMap::identity(), &skel, pattern, slots, eg, state) {
+                for st in final_refine(st, eg) {
+                    out.push(st.subst);
+                }
+            }
+        }
+        out
     }
+}
+
+fn final_refine(state: State, eg: &EGraph<Slotted>) -> Vec<State> {
+    let slots: HashSet<Slot> = state.subst.iter().flat_map(|(_, (m, id))|
+        eg.uf.get_id_semilattice(*id).slots.iter().map(|s| m.get(*s)).collect::<Vec<_>>()
+    ).collect();
+
+    for &x in &slots {
+        for &y in &slots {
+            let x = slot_find(x, &state);
+            let y = slot_find(y, &state);
+            if x == y { continue }
+            if let Some(st2) = slot_unify(x, y, &state) {
+                let mut st1 = state;
+                add_diseqs(&[x, y].into_iter().collect(), &mut st1);
+
+                let mut out = final_refine(st1, eg);
+                out.extend(final_refine(st2, eg));
+                return out
+            }
+        }
+    }
+    vec![state]
 }
 
 fn pat_slots(pat: &Pattern<Slotted>, pslots: &mut HashSet<Slot>) {
