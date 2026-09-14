@@ -339,7 +339,8 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: 
             match (node, pat_node) {
                 (SlottedLang::Sym(_), SlottedLang::Sym(_)) => Some(()),
                 (SlottedLang::Var(v0), SlottedLang::Var(v1)) => {
-                    todo!() // TODO slot union g*v0 = v1.
+                    // TODO: later on we might need unify for this.
+                    if g.get(g_skel.get(v0)) == *v1 { Some(()) } else { None }
                 },
 
                 (SlottedLang::App(..), SlottedLang::App(..))
