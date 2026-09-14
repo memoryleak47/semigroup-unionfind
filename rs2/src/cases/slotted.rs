@@ -271,12 +271,25 @@ impl Analysis for Slotted {
 
             for st in ematch_impl(SlotMap::identity(), &skel, pattern, slots, eg, state) {
                 for st in final_refine(st, eg) {
-                    out.push(st.subst);
+                    out.push(find_subst(st, eg));
                 }
             }
         }
         out
     }
+}
+
+fn find_subst(state: State, eg: &EGraph<Slotted>) -> Subst<Slotted> {
+    state.subst.iter().map(|(pvar, (m, id))| {
+        let mut d = HashMap::new();
+        for &s in &eg.uf.get_id_semilattice(*id).slots {
+            let s_out = m.get(s);
+            let s_out = slot_find(s_out, &state);
+            d.insert(s, s_out);
+        }
+        let m = complete(d);
+        (*pvar, (m, *id))
+    }).collect()
 }
 
 fn final_refine(state: State, eg: &EGraph<Slotted>) -> Vec<State> {
