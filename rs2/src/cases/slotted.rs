@@ -262,8 +262,28 @@ impl Analysis for Slotted {
         skeleton_ematch(eg, id, pattern).into_iter().filter_map(|(_, skel)| {
             let mut subst = Subst::<Self>::new();
             let slots = &eg.uf.get_id_semilattice(id).slots;
-            ematch_impl(SlotMap::identity(), &skel, pattern, slots, &mut subst, eg, &mut Default::default(), &mut Default::default()).map(|_| subst)
+            let mut pslots = HashSet::new();
+            pat_slots(pattern, &mut pslots);
+
+            let mut diseqs: HashMap<Slot, HashSet<Slot>> = HashMap::new();
+            for &p1 in &pslots {
+                let entry = diseqs.entry(p1).or_default();
+                entry.extend(pslots.iter().filter(|a| **a != p1));
+            }
+
+            ematch_impl(SlotMap::identity(), &skel, pattern, slots, &mut subst, eg, &mut Default::default(), &mut diseqs).map(|_| subst)
         }).collect()
+    }
+}
+
+fn pat_slots(pat: &Pattern<Slotted>, pslots: &mut HashSet<Slot>) {
+    match pat {
+        Pattern::Node(SlottedLang::Var(v), _) => { pslots.insert(*v); },
+        Pattern::Node(_, children) => {
+            children.iter().for_each(|p| pat_slots(p, pslots));
+        },
+        Pattern::PVar(_) => {},
+        Pattern::G(..) => unreachable!(),
     }
 }
 
