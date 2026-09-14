@@ -262,7 +262,7 @@ impl Analysis for Slotted {
         skeleton_ematch(eg, id, pattern).into_iter().filter_map(|(_, skel)| {
             let mut subst = Subst::<Self>::new();
             let slots = &eg.uf.get_id_semilattice(id).slots;
-            ematch_impl(SlotMap::identity(), &skel, pattern, slots, &mut subst, eg).map(|_| subst)
+            ematch_impl(SlotMap::identity(), &skel, pattern, slots, &mut subst, eg, &mut Default::default(), &mut Default::default()).map(|_| subst)
         }).collect()
     }
 }
@@ -320,7 +320,7 @@ fn refresh(n: &mut SlottedLang, children: &mut [(SlotMap, SlottedData, Skel<Slot
 }
 
 // g * skel = pat
-fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: &HashSet<Slot>, subst: &mut Subst<Slotted>, eg: &EGraph<Slotted>) -> Option<()> {
+fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: &HashSet<Slot>, subst: &mut Subst<Slotted>, eg: &EGraph<Slotted>, slot_uf: &mut HashMap<Slot, Slot>, diseqs: &mut HashMap<Slot, HashSet<Slot>>) -> Option<()> {
     use SlottedLang::*;
     match (skel, pat) {
         (Skel::PVar(id), Pattern::PVar(v)) => {
@@ -341,8 +341,7 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: 
             match (node, pat_node) {
                 (SlottedLang::Sym(_), SlottedLang::Sym(_)) => Some(()),
                 (SlottedLang::Var(v0), SlottedLang::Var(v1)) => {
-                    // TODO: later on we might need unify for this.
-                    if v0 == *v1 { Some(()) } else { None }
+                    slot_unify(v0, *v1, slot_uf, diseqs)
                 },
 
                 (SlottedLang::App(..), SlottedLang::App(..))
@@ -350,7 +349,7 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: 
                     // g * g_skel * (app g0*c0 g1*c1) = (app p0 p1)
                     for i in 0..2 {
                         let (cg, cs, subskel) = &skel_children[i];
-                        ematch_impl(cg.clone(), subskel, &pat_children[i], &cs.slots, subst, eg)?;
+                        ematch_impl(cg.clone(), subskel, &pat_children[i], &cs.slots, subst, eg, slot_uf, diseqs)?;
                     }
                     Some(())
                 },
@@ -359,6 +358,31 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: 
         },
         _ => unreachable!(),
     }
+}
+
+fn slot_unify(x: Slot, y: Slot, slot_uf: &mut HashMap<Slot, Slot>, diseqs: &mut HashMap<Slot, HashSet<Slot>>) -> Option<()> {
+    let x = slot_find(x, slot_uf);
+    let y = slot_find(y, slot_uf);
+    if diseqs.entry(x).or_default().contains(&y) { return None }
+    if diseqs.entry(y).or_default().contains(&x) { return None }
+    slot_uf.insert(x, y);
+    let x_diseq = diseqs.remove(&x).unwrap_or_default();
+    diseqs.entry(y).or_default().extend(x_diseq);
+
+    for (_, a) in diseqs.iter_mut() {
+        if a.contains(&x) {
+            a.remove(&x);
+            a.insert(y);
+        }
+    }
+    Some(())
+}
+
+fn slot_find(mut x: Slot, slot_uf: &HashMap<Slot, Slot>) -> Slot {
+    while let Some(y) = slot_uf.get(&x) {
+        x = *y;
+    }
+    x
 }
 
 type Pat = Pattern<Slotted>;
