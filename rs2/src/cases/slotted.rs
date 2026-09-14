@@ -313,8 +313,7 @@ fn apply_slotmap(m: SlotMap, n: &mut SlottedLang, children: &mut [(SlotMap, Slot
 fn refresh(n: &mut SlottedLang, children: &mut [(SlotMap, SlottedData, Skel<Slotted>)], slots: &HashSet<Slot>) {
     let exposed = exposed_slots(n, children);
     let redundant = &exposed - slots;
-    let fresh = 10_000..;
-    assert!(redundant.iter().all(|x| *x < 10_000));
+    let fresh = std::iter::from_fn(|| Some(fresh_slot()));
     let it: Vec<(Slot, Slot)> = redundant.into_iter().zip(fresh).collect();
     let m = SlotMap::mk(it.iter().copied().chain(it.iter().map(|(x, y)| (*y, *x))));
     apply_slotmap(m, n, children);
@@ -398,4 +397,11 @@ fn slotted_ematching_test2() {
 
     let matches = ematch_all(&eg, &pat);
     assert_eq!(matches.len(), 1);
+}
+
+// For now, the user isn't allowed to use explicit slots >= 10_000.
+use std::sync::atomic::{AtomicUsize, Ordering};
+static FRESH_COUNTER: AtomicUsize = AtomicUsize::new(10_000);
+pub fn fresh_slot() -> Slot {
+    FRESH_COUNTER.fetch_add(1, Ordering::Relaxed)
 }
