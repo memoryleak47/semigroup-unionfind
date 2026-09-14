@@ -573,6 +573,28 @@ fn slotted_ematching_test4() {
     assert_eq!(matches.len(), 0);
 }
 
+#[test]
+fn slotted_ematching_test5() {
+    let mut eg: EGraph<Slotted> = EGraph::new();
+    let a = add_expr(&
+        mk_app(
+            mk_lam(mk_var(2), mk_var(2)),
+            mk_lam(mk_var(3), mk_var(3))
+        ),
+        &mut eg);
+    eg.rebuild_nodes();
+
+    let pat =
+        mk_app(
+            mk_lam(mk_var(1), mk_pvar("?a")),
+            mk_lam(mk_var(1), mk_pvar("?a"))
+        );
+
+    let matches = ematch_all(&eg, &pat);
+    assert_eq!(matches.len(), 1);
+}
+
+
 // For now, the user isn't allowed to use explicit slots >= 10_000.
 use std::sync::atomic::{AtomicUsize, Ordering};
 static FRESH_COUNTER: AtomicUsize = AtomicUsize::new(10_000);
