@@ -408,6 +408,41 @@ fn slot_unify(x: Slot, y: Slot, slot_uf: &mut HashMap<Slot, Slot>, diseqs: &mut 
     Some(())
 }
 
+fn appid_unify(x: &SlotMap, y: &SlotMap, d: &SlottedData, slot_uf: HashMap<Slot, Slot>, diseqs: HashMap<Slot, HashSet<Slot>>) -> Vec<(HashMap<Slot, Slot>, HashMap<Slot, HashSet<Slot>>)> {
+        let mut out = Vec::new();
+
+    let xslots: HashSet<Slot> = d.slots.iter().map(|s| x.get(*s)).collect();
+    let yslots: HashSet<Slot> = d.slots.iter().map(|s| y.get(*s)).collect();
+
+    let xonly = &xslots - &yslots;
+    let yonly = &yslots - &xslots;
+    if xonly.len() != yonly.len() { return Vec::new() }
+
+    if !xonly.is_empty() {
+        let x0 = *xonly.iter().next().unwrap();
+        for y0 in yonly {
+            let mut slot_uf = slot_uf.clone();
+            let mut diseqs = diseqs.clone();
+            if slot_unify(x0, y0, &mut slot_uf, &mut diseqs).is_some() {
+                out.extend(appid_unify(x, y, d, slot_uf, diseqs));
+            }
+        }
+        return out
+    }
+
+    // Here we know that xslots == yslots.
+    'outer: for g in &d.group {
+        let x = SlotMap::compose(x, g);
+        let mut slot_uf = slot_uf.clone();
+        let mut diseqs = diseqs.clone();
+        for &slot in &d.slots {
+            if slot_unify(x.get(slot), y.get(slot), &mut slot_uf, &mut diseqs).is_none() { continue 'outer }
+        }
+        out.push((slot_uf, diseqs));
+    }
+    out
+}
+
 fn slot_find(mut x: Slot, slot_uf: &HashMap<Slot, Slot>) -> Slot {
     while let Some(y) = slot_uf.get(&x) {
         x = *y;
