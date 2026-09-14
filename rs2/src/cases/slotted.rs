@@ -452,6 +452,8 @@ fn branch_nodes(skel_children: &SkelChildren) -> Vec<(SlotMap, SlotMap)> {
 fn slot_unify(x: Slot, y: Slot, state: &State) -> Option<State> {
     let x = slot_find(x, state);
     let y = slot_find(y, state);
+    if x == y { return Some(state.clone()) }
+
     let mut state = state.clone();
     if state.diseqs.entry(x).or_default().contains(&y) { return None }
     if state.diseqs.entry(y).or_default().contains(&x) { return None }
@@ -471,8 +473,8 @@ fn slot_unify(x: Slot, y: Slot, state: &State) -> Option<State> {
 fn appid_unify(x: &SlotMap, y: &SlotMap, d: &SlottedData, state: &State) -> Vec<State> {
     let mut out = Vec::new();
 
-    let xslots: HashSet<Slot> = d.slots.iter().map(|s| x.get(*s)).collect();
-    let yslots: HashSet<Slot> = d.slots.iter().map(|s| y.get(*s)).collect();
+    let xslots: HashSet<Slot> = d.slots.iter().map(|s| slot_find(x.get(*s), state)).collect();
+    let yslots: HashSet<Slot> = d.slots.iter().map(|s| slot_find(y.get(*s), state)).collect();
 
     let xonly = &xslots - &yslots;
     let yonly = &yslots - &xslots;
