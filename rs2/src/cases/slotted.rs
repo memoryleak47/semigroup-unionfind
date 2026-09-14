@@ -262,6 +262,7 @@ impl Analysis for Slotted {
         skeleton_ematch(eg, id, pattern).into_iter().filter_map(|(_, skel)| {
             let mut subst = Subst::<Self>::new();
             let slots = &eg.uf.get_id_semilattice(id).slots;
+
             let mut pslots = HashSet::new();
             pat_slots(pattern, &mut pslots);
 
@@ -352,9 +353,10 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: 
             Some(())
         },
         (Skel::Node(g_skel, node, skel_children), Pattern::Node(pat_node, pat_children)) => {
+            let effective_g = SlotMap::compose(&g, g_skel);
             let mut node = node.clone();
             let mut skel_children = skel_children.clone();
-            apply_slotmap(SlotMap::compose(&g, g_skel), &mut node, &mut skel_children);
+            apply_slotmap(effective_g.clone(), &mut node, &mut skel_children);
 
             refresh(&mut node, &mut *skel_children, slots);
 
@@ -426,7 +428,6 @@ fn slotted_ematching_test() {
 }
 
 #[test]
-// (app (var $x) (var $y)) matches (app ?x ?y)
 fn slotted_ematching_test2() {
     let mut eg: EGraph<Slotted> = EGraph::new();
     let a = add_expr(&
@@ -441,6 +442,20 @@ fn slotted_ematching_test2() {
 
     let matches = ematch_all(&eg, &pat);
     assert_eq!(matches.len(), 1);
+}
+
+#[test]
+fn slotted_ematching_test3() {
+    let mut eg: EGraph<Slotted> = EGraph::new();
+    let a = add_expr(&
+        mk_lam(mk_var(3), mk_var(3)),
+        &mut eg);
+    eg.rebuild_nodes();
+
+    let pat = mk_lam(mk_var(10), mk_var(11));
+
+    let matches = ematch_all(&eg, &pat);
+    assert_eq!(matches.len(), 0);
 }
 
 // For now, the user isn't allowed to use explicit slots >= 10_000.
