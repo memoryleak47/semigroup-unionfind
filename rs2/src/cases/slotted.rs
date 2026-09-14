@@ -335,12 +335,15 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: 
         (Skel::Node(g_skel, node, skel_children), Pattern::Node(pat_node, pat_children)) => {
             let mut node = node.clone();
             let mut skel_children = skel_children.clone();
+            apply_slotmap(SlotMap::compose(&g, g_skel), &mut node, &mut skel_children);
+
             refresh(&mut node, &mut *skel_children, slots);
+
             match (node, pat_node) {
                 (SlottedLang::Sym(_), SlottedLang::Sym(_)) => Some(()),
                 (SlottedLang::Var(v0), SlottedLang::Var(v1)) => {
                     // TODO: later on we might need unify for this.
-                    if g.get(g_skel.get(v0)) == *v1 { Some(()) } else { None }
+                    if v0 == *v1 { Some(()) } else { None }
                 },
 
                 (SlottedLang::App(..), SlottedLang::App(..))
@@ -348,8 +351,7 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: 
                     // g * g_skel * (app g0*c0 g1*c1) = (app p0 p1)
                     for i in 0..2 {
                         let (cg, cs, subskel) = &skel_children[i];
-                        let rec = SlotMap::compose(&SlotMap::compose(&g, &g_skel), &cg);
-                        ematch_impl(rec, subskel, &pat_children[i], &cs.slots, subst, eg)?;
+                        ematch_impl(cg.clone(), subskel, &pat_children[i], &cs.slots, subst, eg)?;
                     }
                     Some(())
                 },
