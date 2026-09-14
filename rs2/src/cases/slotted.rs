@@ -346,7 +346,7 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: 
 
                 (SlottedLang::App(..), SlottedLang::App(..))
                |(SlottedLang::Lam(..), SlottedLang::Lam(..)) => {
-                    // g * g_skel * (app g0*c0 g1*c1) = (app p0 p1)
+                    // (app g0*c0 g1*c1) = (app p0 p1)
                     for i in 0..2 {
                         let (cg, cs, subskel) = &skel_children[i];
                         ematch_impl(cg.clone(), subskel, &pat_children[i], &cs.slots, subst, eg, slot_uf, diseqs)?;
