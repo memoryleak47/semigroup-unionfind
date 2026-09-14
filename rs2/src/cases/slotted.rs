@@ -259,17 +259,16 @@ impl Analysis for Slotted {
     }
 
     fn ematch(eg: &EGraph<Self>, id: Id, pattern: &Pattern<Self>) -> Vec<Subst<Self>> {
-        skeleton_ematch(eg, id, pattern).into_iter().filter_map(|(_, skel)| {
-            let mut subst = Subst::<Self>::new();
+        skeleton_ematch(eg, id, pattern).into_iter().flat_map(|(_, skel)| {
             let slots = &eg.uf.get_id_semilattice(id).slots;
 
             let mut pslots = HashSet::new();
             pat_slots(pattern, &mut pslots);
 
-            let mut diseqs: HashMap<Slot, HashSet<Slot>> = HashMap::new();
-            add_diseqs(&pslots, &mut diseqs);
+            let mut state = State::default();
+            add_diseqs(&pslots, &mut state);
 
-            ematch_impl(SlotMap::identity(), &skel, pattern, slots, &mut subst, eg, &mut Default::default(), &mut diseqs).map(|_| subst)
+            ematch_impl(SlotMap::identity(), &skel, pattern, slots, eg, state).into_iter().map(|state| state.subst)
         }).collect()
     }
 }
@@ -337,24 +336,31 @@ fn refresh(n: &mut SlottedLang, children: &mut [(SlotMap, SlottedData, Skel<Slot
     apply_slotmap(m, n, children);
 }
 
-fn add_diseqs(slots: &HashSet<Slot>, diseqs: &mut HashMap<Slot, HashSet<Slot>>) {
+fn add_diseqs(slots: &HashSet<Slot>, state: &mut State) {
     for &x in slots {
-        let entry = diseqs.entry(x).or_default();
+        let entry = state.diseqs.entry(x).or_default();
         entry.extend(slots.iter().filter(|a| **a != x));
     }
 }
 
+#[derive(Clone, Default)]
+struct State {
+    slot_uf: HashMap<Slot, Slot>,
+    diseqs: HashMap<Slot, HashSet<Slot>>,
+    subst: Subst<Slotted>,
+}
+
 // g * skel = pat
-fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: &HashSet<Slot>, subst: &mut Subst<Slotted>, eg: &EGraph<Slotted>, slot_uf: &mut HashMap<Slot, Slot>, diseqs: &mut HashMap<Slot, HashSet<Slot>>) -> Option<()> {
+fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: &HashSet<Slot>, eg: &EGraph<Slotted>, mut state: State) -> Vec<State> {
     use SlottedLang::*;
     match (skel, pat) {
         (Skel::PVar(id), Pattern::PVar(v)) => {
             let new = (g.clone(), *id);
-            if let Some(old) = subst.insert(*v, new.clone()) {
-                // TODO this requires slot merging later on.
-                if !eg.is_equal(old, new) { return None }
-            }
-            Some(())
+            if let Some((old_g, id2)) = state.subst.insert(*v, new.clone()) {
+                assert_eq!(*id, id2);
+                let d = eg.uf.get_id_semilattice(*id);
+                return appid_unify(&g, &old_g, &d, &state)
+            } else { return vec![state] }
         },
         (Skel::Node(g_skel, node, skel_children), Pattern::Node(pat_node, pat_children)) => {
             let effective_g = SlotMap::compose(&g, g_skel);
@@ -366,22 +372,25 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: 
             refresh(&mut node, &mut *skel_children, &effective_slots);
 
             let slots = exposed_slots(&node, &skel_children);
-            add_diseqs(&slots, diseqs);
+            add_diseqs(&slots, &mut state);
 
             match (node, pat_node) {
-                (SlottedLang::Sym(_), SlottedLang::Sym(_)) => Some(()),
-                (SlottedLang::Var(v0), SlottedLang::Var(v1)) => {
-                    slot_unify(v0, *v1, slot_uf, diseqs)
-                },
+                (SlottedLang::Sym(_), SlottedLang::Sym(_)) => vec![state],
+
+                (SlottedLang::Var(v0), SlottedLang::Var(v1)) => slot_unify(v0, *v1, &state).into_iter().collect(),
 
                 (SlottedLang::App(..), SlottedLang::App(..))
                |(SlottedLang::Lam(..), SlottedLang::Lam(..)) => {
                     // (app g0*c0 g1*c1) = (app p0 p1)
-                    for i in 0..2 {
-                        let (cg, cs, subskel) = &skel_children[i];
-                        ematch_impl(cg.clone(), subskel, &pat_children[i], &cs.slots, subst, eg, slot_uf, diseqs)?;
+
+                    let mut out = Vec::new();
+
+                    let (cg, cs, subskel) = &skel_children[0];
+                    for state2 in ematch_impl(cg.clone(), subskel, &pat_children[0], &cs.slots, eg, state) {
+                        let (cg, cs, subskel) = &skel_children[1];
+                        out.extend(ematch_impl(cg.clone(), subskel, &pat_children[1], &cs.slots, eg, state2));
                     }
-                    Some(())
+                    out
                 },
                 _ => unreachable!(),
             }
@@ -390,26 +399,27 @@ fn ematch_impl(g: SlotMap, skel: &Skel<Slotted>, pat: &Pattern<Slotted>, slots: 
     }
 }
 
-fn slot_unify(x: Slot, y: Slot, slot_uf: &mut HashMap<Slot, Slot>, diseqs: &mut HashMap<Slot, HashSet<Slot>>) -> Option<()> {
-    let x = slot_find(x, slot_uf);
-    let y = slot_find(y, slot_uf);
-    if diseqs.entry(x).or_default().contains(&y) { return None }
-    if diseqs.entry(y).or_default().contains(&x) { return None }
-    slot_uf.insert(x, y);
-    let x_diseq = diseqs.remove(&x).unwrap_or_default();
-    diseqs.entry(y).or_default().extend(x_diseq);
+fn slot_unify(x: Slot, y: Slot, state: &State) -> Option<State> {
+    let x = slot_find(x, state);
+    let y = slot_find(y, state);
+    let mut state = state.clone();
+    if state.diseqs.entry(x).or_default().contains(&y) { return None }
+    if state.diseqs.entry(y).or_default().contains(&x) { return None }
+    state.slot_uf.insert(x, y);
+    let x_diseq = state.diseqs.remove(&x).unwrap_or_default();
+    state.diseqs.entry(y).or_default().extend(x_diseq);
 
-    for (_, a) in diseqs.iter_mut() {
+    for (_, a) in state.diseqs.iter_mut() {
         if a.contains(&x) {
             a.remove(&x);
             a.insert(y);
         }
     }
-    Some(())
+    Some(state)
 }
 
-fn appid_unify(x: &SlotMap, y: &SlotMap, d: &SlottedData, slot_uf: HashMap<Slot, Slot>, diseqs: HashMap<Slot, HashSet<Slot>>) -> Vec<(HashMap<Slot, Slot>, HashMap<Slot, HashSet<Slot>>)> {
-        let mut out = Vec::new();
+fn appid_unify(x: &SlotMap, y: &SlotMap, d: &SlottedData, state: &State) -> Vec<State> {
+    let mut out = Vec::new();
 
     let xslots: HashSet<Slot> = d.slots.iter().map(|s| x.get(*s)).collect();
     let yslots: HashSet<Slot> = d.slots.iter().map(|s| y.get(*s)).collect();
@@ -421,10 +431,8 @@ fn appid_unify(x: &SlotMap, y: &SlotMap, d: &SlottedData, slot_uf: HashMap<Slot,
     if !xonly.is_empty() {
         let x0 = *xonly.iter().next().unwrap();
         for y0 in yonly {
-            let mut slot_uf = slot_uf.clone();
-            let mut diseqs = diseqs.clone();
-            if slot_unify(x0, y0, &mut slot_uf, &mut diseqs).is_some() {
-                out.extend(appid_unify(x, y, d, slot_uf, diseqs));
+            if let Some(state) = slot_unify(x0, y0, state) {
+                out.extend(appid_unify(x, y, d, &state));
             }
         }
         return out
@@ -433,18 +441,18 @@ fn appid_unify(x: &SlotMap, y: &SlotMap, d: &SlottedData, slot_uf: HashMap<Slot,
     // Here we know that xslots == yslots.
     'outer: for g in &d.group {
         let x = SlotMap::compose(x, g);
-        let mut slot_uf = slot_uf.clone();
-        let mut diseqs = diseqs.clone();
+        let mut state = state.clone();
         for &slot in &d.slots {
-            if slot_unify(x.get(slot), y.get(slot), &mut slot_uf, &mut diseqs).is_none() { continue 'outer }
+            let Some(state2) = slot_unify(x.get(slot), y.get(slot), &mut state) else { continue 'outer };
+            state = state2;
         }
-        out.push((slot_uf, diseqs));
+        out.push(state);
     }
     out
 }
 
-fn slot_find(mut x: Slot, slot_uf: &HashMap<Slot, Slot>) -> Slot {
-    while let Some(y) = slot_uf.get(&x) {
+fn slot_find(mut x: Slot, state: &State) -> Slot {
+    while let Some(y) = state.slot_uf.get(&x) {
         x = *y;
     }
     x
