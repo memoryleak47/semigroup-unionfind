@@ -138,7 +138,7 @@ fn complete_data(d: &mut SlottedData) {
     }
 
     // saturate group.
-    d.group.insert(SlotMap::identity());
+    d.group.insert(SlotMap::mk(d.slots.iter().map(|&x| (x, x))));
     loop {
         let old_group = std::mem::take(&mut d.group);
         for p1 in &old_group {
@@ -208,7 +208,7 @@ impl Analysis for Slotted {
             SlottedLang::Sym(_) => std::iter::empty().collect(),
         };
         let mut group = HashSet::new();
-        group.insert(SlotMap::identity());
+        group.insert(SlotMap::mk(slots.iter().map(|&x| (x, x))));
         SlottedData { slots, group }
     }
 
@@ -260,6 +260,26 @@ impl Analysis for Slotted {
         */
         todo!("ematching unsupported")
     }
+}
+
+type Pat = Pattern<Slotted>;
+fn nil() -> (SlotMap, Id) { (SlotMap::mk(std::iter::empty()), Id(0)) }
+fn mk_lam(p1: Pat, p2: Pat) -> Pat { Pattern::Node(SlottedLang::Lam(nil(), nil()), Box::new([p1, p2])) }
+fn mk_app(p1: Pat, p2: Pat) -> Pat { Pattern::Node(SlottedLang::App(nil(), nil()), Box::new([p1, p2])) }
+
+fn mk_sym(s: &str) -> Pat { Pattern::Node(SlottedLang::Sym(Symbol::new(s)), Box::new([])) }
+fn mk_var(s: Slot) -> Pat { Pattern::Node(SlottedLang::Var(s), Box::new([])) }
+fn mk_pvar(s: &str) -> Pat { Pattern::PVar(Symbol::new(s)) }
+
+#[test]
+fn test_slotted1() {
+    let mut eg: EGraph<Slotted> = EGraph::new();
+    let a = add_expr(&mk_lam(mk_var(3), mk_var(3)), &mut eg);
+    let b = add_expr(&mk_lam(mk_var(4), mk_var(4)), &mut eg);
+    eg.union(a, b);
+    let c = add_expr(&mk_lam(mk_var(7), mk_var(7)), &mut eg);
+    let d = add_expr(&mk_lam(mk_var(8), mk_var(8)), &mut eg);
+    assert!(eg.is_equal(c, d));
 }
 
 /*
@@ -480,15 +500,6 @@ fn slot_find(mut x: Slot, state: &State) -> Slot {
     }
     x
 }
-
-type Pat = Pattern<Slotted>;
-fn nil() -> (SlotMap, Id) { (SlotMap::identity(), Id(0)) }
-fn mk_lam(p1: Pat, p2: Pat) -> Pat { Pattern::Node(SlottedLang::Lam(nil(), nil()), Box::new([p1, p2])) }
-fn mk_app(p1: Pat, p2: Pat) -> Pat { Pattern::Node(SlottedLang::App(nil(), nil()), Box::new([p1, p2])) }
-
-fn mk_sym(s: &str) -> Pat { Pattern::Node(SlottedLang::Sym(Symbol::new(s)), Box::new([])) }
-fn mk_var(s: Slot) -> Pat { Pattern::Node(SlottedLang::Var(s), Box::new([])) }
-fn mk_pvar(s: &str) -> Pat { Pattern::PVar(Symbol::new(s)) }
 
 #[test]
 // (app (var $x) (var $y)) matches (app ?x ?y)
