@@ -31,8 +31,7 @@ impl SlotMap {
 }
 
 impl Group for SlotMap {
-    // TODO this identity is wrong. Either we build a "global identity", or we don't require it.
-    fn identity() -> SlotMap { SlotMap::mk(std::iter::empty()) }
+    fn identity() -> SlotMap { panic!("should never be called") }
 
     // l*(r*_)
     // This is partial compose!
@@ -91,6 +90,14 @@ impl Semilattice for SlottedData {
     fn contains_self_edge(&self, g: &Self::G) -> bool {
         let Some(g) = restrict(g, &self.slots) else { return false };
         self.group.contains(&g)
+    }
+
+    fn local_identity(&self) -> Self::G {
+        SlotMap::mk(self.slots.iter().map(|&x| (x, x)))
+    }
+
+    fn coset(g: &Self::G, s: &Self) -> Self::G {
+        SlotMap::mk(g.iter().filter(|(k, _)| s.slots.contains(k)))
     }
 }
 
