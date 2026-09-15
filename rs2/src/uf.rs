@@ -43,7 +43,11 @@ impl<S: Semilattice> Unionfind<S> {
     pub fn find(&self, (mut g, mut x): (S::G, Id)) -> (S::G, Id) {
         loop {
             let (g2, x2) = &self.v[x.0].leader;
-            if *x2 == x { return (g, x) }
+            if *x2 == x {
+                // TODO is this even necessary?
+                let g = S::coset(&g, &self.get_leader_semilattice(x));
+                return (g, x)
+            }
 
             // we want to return g*x where g2*x2 = x.
             (g, x) = (S::G::compose(&g, g2), *x2);
