@@ -4,9 +4,7 @@ type Slot = usize;
 
 /// SlotMap ///
 
-// invariant: bijective & total (every missing key is the identity).
-// Thus the key & value sets are equal, we call them the support.
-// Every identity pairs are missing in v. v is sorted by keys.
+// invariant: injective. Its set of keys typically comes from the public slots of some e-class.
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 struct SlotMap {
     v: Vec<(Slot, Slot)>
@@ -14,29 +12,17 @@ struct SlotMap {
 
 impl SlotMap {
     pub fn mk(it: impl Iterator<Item=(Slot, Slot)>) -> SlotMap {
-        let mut v: Vec<(Slot, Slot)> = it.filter(|(x, y)| x != y).collect();
-
-        { // DEBUGGING
-            for (x, y) in &v {
-                assert!(x != y);
-            }
-            let kset = v.iter().map(|(x, _)| *x).collect::<HashSet<Slot>>();
-            let vset = v.iter().map(|(_, y)| *y).collect::<HashSet<Slot>>();
-            assert!(kset == vset);
-            assert!(kset.len() == v.len()); // no duplicates
-        }
-
+        let mut v: Vec<(Slot, Slot)> = it.collect();
         v.sort_by_key(|(x, _)| *x);
         SlotMap { v }
     }
 
-    pub fn support(&self) -> impl Iterator<Item=Slot> {
-        self.v.iter().map(|(x, _)| *x)
-    }
+    pub fn keys(&self) -> Vec<Slot> { self.v.iter().map(|(k, _)| *k).collect() }
+    pub fn values(&self) -> Vec<Slot> { self.v.iter().map(|(_, v)| *v).collect() }
 
-    pub fn get(&self, x: Slot) -> Slot {
-        if let Some((_, b)) = self.v.iter().find(|(a, b)| *a == x) { *b }
-        else { x }
+    pub fn get(&self, x: Slot) -> Option<Slot> {
+        if let Some((_, b)) = self.v.iter().find(|(a, b)| *a == x) { Some(*b) }
+        else { None }
     }
 
     pub fn iter(&self) -> impl Iterator<Item=(Slot,Slot)> {
@@ -45,15 +31,19 @@ impl SlotMap {
 }
 
 impl Group for SlotMap {
+    // TODO this identity is wrong. Either we build a "global identity", or we don't require it.
     fn identity() -> SlotMap { SlotMap::mk(std::iter::empty()) }
 
     // l*(r*_)
+    // This is partial compose!
     fn compose(l: &SlotMap, r: &SlotMap) -> SlotMap {
-        let set = l.support().chain(r.support()).collect::<HashSet<Slot>>();
-        SlotMap::mk(set.into_iter()
-                       .map(|x| (x, l.get(r.get(x))))
-                       .filter(|(x, y)| x != y)
-                   )
+        let mut v = Vec::new();
+        for (x, y) in r.iter() {
+            if let Some(z) = l.get(y) {
+                v.push((x, z));
+            }
+        }
+        SlotMap { v }
     }
 
     fn inverse(&self) -> SlotMap {
@@ -73,7 +63,7 @@ impl Semilattice for SlottedData {
     type G = SlotMap;
 
     fn act(g: &Self::G, s: &Self) -> Self {
-        let slots = s.slots.iter().map(|x| g.get(*x)).collect();
+        let slots = s.slots.iter().flat_map(|x| g.get(*x)).collect();
         let group = s.group.iter().map(|p| {
             // We know p*s = s and s' = g*s.
             // We want to return p' with p'*s' = s'.
@@ -179,30 +169,16 @@ impl Analysis for Slotted {
             let (g1, i1) = uf.find(x1.clone());
             let (g2, i2) = uf.find(x2.clone());
 
-            let mut d = HashMap::new();
+            let mut d: HashMap<Slot, Slot> = HashMap::new();
             // d :: slots(n) -> SHAPE
 
-            let mut slots1: Vec<Slot> = uf.get_leader_semilattice(i1).slots.iter().copied().collect();
-            slots1.sort();
-            let it1 = slots1.into_iter().map(|x| g1.get(x));
-
-            let mut slots2: Vec<Slot> = uf.get_leader_semilattice(i2).slots.iter().copied().collect();
-            slots2.sort();
-            let it2 = slots2.into_iter().map(|x| g2.get(x));
-
-            let it = it1.chain(it2);
-
-            for s in it {
-                if !d.contains_key(&s) {
-                    d.insert(s, d.len());
-                }
+            for s in g1.values().into_iter().chain(g2.values().into_iter()) {
+                if !d.contains_key(&s) { d.insert(s, d.len()); }
             }
-            let d = complete(d);
-            let m1 = SlotMap::compose(&d, &g1);
-            let m1 = canon((m1, i1), uf);
+            let d = SlotMap::mk(d.into_iter());
 
+            let m1 = SlotMap::compose(&d, &g1);
             let m2 = SlotMap::compose(&d, &g2);
-            let m2 = canon((m2, i2), uf);
 
             (d.inverse(), Either::L(cb((m1, i1), (m2, i2))))
         };
@@ -210,11 +186,8 @@ impl Analysis for Slotted {
             SlottedLang::Lam(x1, x2) => f(x1, x2, SlottedLang::Lam),
             SlottedLang::App(x1, x2) => f(x1, x2, SlottedLang::App),
             SlottedLang::Var(x) => {
-                if *x == 0 { (SlotMap::identity(), Either::L(n.clone())) }
-                else {
-                    let g = SlotMap::mk([(*x, 0), (0, *x)].into_iter());
-                    (g, Either::L(SlottedLang::Var(0)))
-                }
+                let g = SlotMap::mk([(0, *x)].into_iter());
+                (g, Either::L(SlottedLang::Var(0)))
             },
             SlottedLang::Sym(_) => (SlotMap::identity(), Either::L(n.clone())),
         }
@@ -259,6 +232,7 @@ impl Analysis for Slotted {
     }
 
     fn ematch(eg: &EGraph<Self>, id: Id, pattern: &Pattern<Self>) -> Vec<Subst<Self>> {
+        /*
         let mut out = Vec::new();
         for (_, skel) in skeleton_ematch(eg, id, pattern) {
             let slots = &eg.uf.get_id_semilattice(id).slots;
@@ -276,9 +250,12 @@ impl Analysis for Slotted {
             }
         }
         out
+        */
+        todo!("ematching unsupported")
     }
 }
 
+/*
 fn find_subst(state: State, eg: &EGraph<Slotted>) -> Subst<Slotted> {
     state.subst.iter().map(|(pvar, (m, id))| {
         let mut d = HashMap::new();
@@ -324,32 +301,6 @@ fn pat_slots(pat: &Pattern<Slotted>, pslots: &mut HashSet<Slot>) {
         Pattern::PVar(_) => {},
         Pattern::G(..) => unreachable!(),
     }
-}
-
-fn complete(mut d: HashMap<Slot, Slot>) -> SlotMap {
-    let keys: HashSet<Slot> = d.keys().copied().collect();
-    let values: HashSet<Slot> = d.values().copied().collect();
-
-    let k2 = &keys - &values;
-    let v2 = &values - &keys;
-
-    let mut k2: Vec<Slot> = k2.into_iter().collect();
-    let mut v2: Vec<Slot> = v2.into_iter().collect();
-
-    assert_eq!(k2.len(), v2.len());
-    k2.sort();
-    v2.sort();
-
-    for (k, v) in k2.into_iter().zip(v2.into_iter()) {
-        d.insert(v, k);
-    }
-    SlotMap::mk(d.into_iter())
-}
-
-fn canon((m, x): (SlotMap, Id), uf: &Unionfind<SlottedData>) -> SlotMap {
-    let slots = &uf.get_leader_semilattice(x).slots;
-    let m2 = m.iter().filter(|(a, b)| slots.contains(a)).collect();
-    complete(m2)
 }
 
 /// ematching ///
@@ -729,3 +680,4 @@ static FRESH_COUNTER: AtomicUsize = AtomicUsize::new(10_000);
 pub fn fresh_slot() -> Slot {
     FRESH_COUNTER.fetch_add(1, Ordering::Relaxed)
 }
+*/

@@ -1,5 +1,9 @@
 use crate::*;
 
+// We don't really require this to be a group, the name is historic.
+// We require compose to be associative, and we require (a*b)⁻¹ = b⁻¹*a⁻¹, and I guess a*a⁻¹*a = a.
+// not super sure, let's determine what we need from the code.
+// Why do we even have an identity?
 pub trait Group: Clone + Eq + Debug + Hash + PartialEq {
     fn identity() -> Self;
 
@@ -56,4 +60,7 @@ pub trait Analysis: Sized {
         n1 == n2
     }
     fn ematch(eg: &EGraph<Self>, id: Id, pat: &Pattern<Self>) -> Vec<Subst<Self>> { todo!("ematch unsupported!") }
+
+    // if you have g*x, where s is the semilattice of x, then you can simplify it to g'*x, where g' = coset(g, s).
+    fn coset(g: &Self::G, s: &Self::S) -> Self::G { todo!() }
 }
