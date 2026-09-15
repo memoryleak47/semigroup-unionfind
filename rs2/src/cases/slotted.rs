@@ -196,7 +196,7 @@ impl Analysis for Slotted {
                 let g = SlotMap::mk([(0, *x)].into_iter());
                 (g, Either::L(SlottedLang::Var(0)))
             },
-            SlottedLang::Sym(_) => (SlotMap::identity(), Either::L(n.clone())),
+            SlottedLang::Sym(_) => (SlotMap::mk(std::iter::empty()), Either::L(n.clone())),
         }
     }
 
@@ -276,6 +276,17 @@ fn test_slotted1() {
     let mut eg: EGraph<Slotted> = EGraph::new();
     let a = add_expr(&mk_lam(mk_var(3), mk_var(3)), &mut eg);
     let b = add_expr(&mk_lam(mk_var(4), mk_var(4)), &mut eg);
+    eg.union(a, b);
+    let c = add_expr(&mk_lam(mk_var(7), mk_var(7)), &mut eg);
+    let d = add_expr(&mk_lam(mk_var(8), mk_var(8)), &mut eg);
+    assert!(eg.is_equal(c, d));
+}
+
+#[test]
+fn test_slotted2() {
+    let mut eg: EGraph<Slotted> = EGraph::new();
+    let a = add_expr(&mk_lam(mk_var(3), mk_var(3)), &mut eg);
+    let b = add_expr(&mk_sym("ident"), &mut eg);
     eg.union(a, b);
     let c = add_expr(&mk_lam(mk_var(7), mk_var(7)), &mut eg);
     let d = add_expr(&mk_lam(mk_var(8), mk_var(8)), &mut eg);
