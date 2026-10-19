@@ -1,4 +1,4 @@
-use symbol_table::GlobalSymbol as Symbol;
+pub use symbol_table::GlobalSymbol as Symbol;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::fmt::Debug;
