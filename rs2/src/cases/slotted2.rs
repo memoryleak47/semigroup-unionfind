@@ -138,7 +138,7 @@ fn complete_data(d: &mut SlottedData) {
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 enum SlottedLang {
     // For simplicity, we represent (lam $x $x) as (lam (var $x) (var $x)).
-    Lam((SlotMap, Id), (SlotMap, Id)),
+    Lam(Slot, (SlotMap, Id)),
     App((SlotMap, Id), (SlotMap, Id)),
     Var(Slot),
     Sym(Symbol),
@@ -167,33 +167,41 @@ impl Analysis for Slotted {
     type L = SlottedLang;
 
     fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Either<Self::L, Id>) {
-        let f = |x1: &(SlotMap, Id), x2: &(SlotMap, Id), cb: fn((SlotMap, Id), (SlotMap, Id)) -> SlottedLang| {
-            let (g1, i1) = uf.find(x1.clone());
-            let (g2, i2) = uf.find(x2.clone());
-
-            let mut slots1: Vec<Slot> = uf.get_leader_semilattice(i1).slots.iter().copied().collect();
-            slots1.sort();
-            let it1 = slots1.into_iter().flat_map(|x| g1.get(x));
-
-            let mut slots2: Vec<Slot> = uf.get_leader_semilattice(i2).slots.iter().copied().collect();
-            slots2.sort();
-            let it2 = slots2.into_iter().flat_map(|x| g2.get(x));
-
-            let it = it1.chain(it2);
-
-            let d = canon_shape(it);
-
-            let m1 = SlotMap::compose(&d, &g1);
-            let m1 = canon((m1, i1), uf);
-
-            let m2 = SlotMap::compose(&d, &g2);
-            let m2 = canon((m2, i2), uf);
-
-            (d.inverse(), Either::L(cb((m1, i1), (m2, i2))))
-        };
         match n {
-            SlottedLang::Lam(x1, x2) => f(x1, x2, SlottedLang::Lam),
-            SlottedLang::App(x1, x2) => f(x1, x2, SlottedLang::App),
+            SlottedLang::Lam(x1, x2) => {
+                let (g2, i2) = uf.find(x2.clone());
+
+                let it1 = std::iter::once(*x1);
+
+                let mut slots2: Vec<Slot> = uf.get_leader_semilattice(i2).slots.iter().copied().collect();
+                slots2.sort();
+                let it2 = slots2.into_iter().flat_map(|x| g2.get(x));
+
+                let it = it1.chain(it2);
+                let d = canon_shape(it);
+
+                let m2 = SlotMap::compose(&d, &g2);
+                (d.inverse(), Either::L(SlottedLang::Lam(0, (m2, i2))))
+            },
+            SlottedLang::App(x1, x2) => {
+                let (g1, i1) = uf.find(x1.clone());
+                let (g2, i2) = uf.find(x2.clone());
+
+                let mut slots1: Vec<Slot> = uf.get_leader_semilattice(i1).slots.iter().copied().collect();
+                slots1.sort();
+                let it1 = slots1.into_iter().flat_map(|x| g1.get(x));
+
+                let mut slots2: Vec<Slot> = uf.get_leader_semilattice(i2).slots.iter().copied().collect();
+                slots2.sort();
+                let it2 = slots2.into_iter().flat_map(|x| g2.get(x));
+
+                let it = it1.chain(it2);
+                let d = canon_shape(it);
+
+                let m1 = SlotMap::compose(&d, &g1);
+                let m2 = SlotMap::compose(&d, &g2);
+                (d.inverse(), Either::L(SlottedLang::App((m1, i1), (m2, i2))))
+            },
             SlottedLang::Var(x) => {
                 let g = SlotMap::mk([(0, *x)].into_iter());
                 (g, Either::L(SlottedLang::Var(0)))
@@ -204,7 +212,7 @@ impl Analysis for Slotted {
 
     fn mk(n: &Self::L, _id: Id, uf: &Unionfind<Self::S>) -> Self::S {
         let slots = match n {
-            SlottedLang::Lam(x1, x2) => &uf.get_semilattice(x2).slots - &uf.get_semilattice(x1).slots,
+            SlottedLang::Lam(x1, x2) => &uf.get_semilattice(x2).slots - &std::iter::once(*x1).collect::<HashSet<_>>(),
             SlottedLang::App(x1, x2) => &uf.get_semilattice(x1).slots | &uf.get_semilattice(x2).slots,
             SlottedLang::Var(x) => std::iter::once(*x).collect(),
             SlottedLang::Sym(_) => std::iter::empty().collect(),
@@ -216,7 +224,8 @@ impl Analysis for Slotted {
 
     fn children_mut(n: &mut Self::L) -> Box<[&mut (SlotMap, Id)]> {
         match n {
-            SlottedLang::Lam(x1, x2)|SlottedLang::App(x1, x2) => Box::new([x1, x2]),
+            SlottedLang::Lam(_, x2) => Box::new([x2]),
+            SlottedLang::App(x1, x2) => Box::new([x1, x2]),
             SlottedLang::Var(_)|SlottedLang::Sym(_) => Box::new([]),
         }
     }
@@ -243,10 +252,4 @@ impl Analysis for Slotted {
     fn ematch(eg: &EGraph<Self>, id: Id, pattern: &Pattern<Self>) -> Vec<Subst<Self>> {
         todo!()
     }
-}
-
-fn canon((m, x): (SlotMap, Id), uf: &Unionfind<SlottedData>) -> SlotMap {
-    let slots = &uf.get_leader_semilattice(x).slots;
-    let m2: HashMap<_, _> = m.iter().filter(|(a, b)| slots.contains(a)).collect();
-    SlotMap::mk(m2.into_iter())
 }
