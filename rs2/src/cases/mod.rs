@@ -1,6 +1,7 @@
 use crate::*;
 
 pub mod slotted;
+pub mod slotted2;
 pub mod offset;
 pub mod caviar_offset;
 pub mod linear;
