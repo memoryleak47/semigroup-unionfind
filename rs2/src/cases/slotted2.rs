@@ -197,7 +197,7 @@ impl Analysis for Slotted {
                     d.insert(s, d.len());
                 }
             }
-            let d = complete(d);
+            let d = SlotMap::mk(d.into_iter());
             let m1 = SlotMap::compose(&d, &g1);
             let m1 = canon((m1, i1), uf);
 
@@ -287,7 +287,7 @@ fn find_subst(state: State, eg: &EGraph<Slotted>) -> Subst<Slotted> {
             let s_out = slot_find(s_out, &state);
             d.insert(s, s_out);
         }
-        let m = complete(d);
+        let m = SlotMap::mk(d.into_iter());
         (*pvar, (m, *id))
     }).collect()
 }
@@ -326,30 +326,11 @@ fn pat_slots(pat: &Pattern<Slotted>, pslots: &mut HashSet<Slot>) {
     }
 }
 
-fn complete(mut d: HashMap<Slot, Slot>) -> SlotMap {
-    let keys: HashSet<Slot> = d.keys().copied().collect();
-    let values: HashSet<Slot> = d.values().copied().collect();
-
-    let k2 = &keys - &values;
-    let v2 = &values - &keys;
-
-    let mut k2: Vec<Slot> = k2.into_iter().collect();
-    let mut v2: Vec<Slot> = v2.into_iter().collect();
-
-    assert_eq!(k2.len(), v2.len());
-    k2.sort();
-    v2.sort();
-
-    for (k, v) in k2.into_iter().zip(v2.into_iter()) {
-        d.insert(v, k);
-    }
-    SlotMap::mk(d.into_iter())
-}
 
 fn canon((m, x): (SlotMap, Id), uf: &Unionfind<SlottedData>) -> SlotMap {
     let slots = &uf.get_leader_semilattice(x).slots;
-    let m2 = m.iter().filter(|(a, b)| slots.contains(a)).collect();
-    complete(m2)
+    let m2: HashMap<_, _> = m.iter().filter(|(a, b)| slots.contains(a)).collect();
+    SlotMap::mk(m2.into_iter())
 }
 
 /// ematching ///
