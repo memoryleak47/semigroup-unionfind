@@ -1,5 +1,8 @@
 use crate::*;
 
+mod parse;
+pub use parse::parse;
+
 type Slot = usize;
 
 /// SlotMap ///
@@ -284,20 +287,31 @@ impl Analysis for Slotted {
     }
 }
 
+macro_rules! rw {
+    ($name:expr; $lhs:expr => $rhs:expr) => {
+        (parse($lhs), pattern_applier(parse($rhs)))
+    };
+    ($name:expr; $lhs:expr => $rhs:expr, if $cond:expr) => {
+        // TODO support side-conditions
+        (parse($lhs), pattern_applier(parse($rhs)))
+    };
+}
+
 fn rules() -> Vec<Rule<Slotted>> {
     vec![
-        /*
-        rw!("eta"; "(lam $x (app ?f (var $x)))" => "?f", if !slot_free_in("x", "f")),
-        rw!("beta"; "(app (lam $x ?body) ?e)" => "?body[(var $x) := ?e]"),
-        rw!("let-intro"; "(app (lam $x ?body) ?e)" => "(let ?e $x ?body)"),
-        rw!("let-unused"; "(let ?t $x ?b)" => "?b", if !slot_free_in("x", "b")),
-        rw!("let-var-same"; "(let ?e $x (var $x))" => "?e"),
-        rw!("let-app";"(let ?e $x (app ?a ?b))"=>"(app (let ?e $x ?ae) (let ?e $x ?b))", if or(slot_free_in("x", "a"), slot_free_in("x", "b"))),
-        rw!("let-lam-diff"; "(let ?e $x (lam $y ?body))"=>"(lam $y (let ?e $x ?body))", if slot_free_in("x", "body")),
-
-        rw!("map-fusion"; "(app (app map ?f) (app (app map ?g) ?arg))" => "(app (app map (lam $x (app ?f (app ?g (var $x))))) ?arg)"),
-
-        rw!("map-fission"; "(app map (lam $x (app ?f ?gx)))" => "(lam $in (app (app map ?f) (app (app map (lam $x ?gx)) (var $in))))", if !slot_free_in("x", "f"))
-        */
+        rw!("eta"; "(lam $0 (app ?f (var $0)))" => "?f", if !slot_free_in("0", "f")),
+        rw!("beta"; "(app (lam $0 ?body) ?e)" => "(let ?e $0 ?body)"),
+        rw!("let-intro"; "(app (lam $0 ?body) ?e)" => "(let ?e $0 ?body)"),
+        rw!("let-unused"; "(let ?t $0 ?b)" => "?b", if !slot_free_in("0", "b")),
+        rw!("let-var-same"; "(let ?e $0 (var $0))" => "?e"),
+        rw!("let-app";"(let ?e $0 (app ?a ?b))"=>"(app (let ?e $0 ?ae) (let ?e $0 ?b))", if or(slot_free_in("0", "a"), slot_free_in("0", "b"))),
+        rw!("let-lam-diff"; "(let ?e $0 (lam $1 ?body))"=>"(lam $1 (let ?e $0 ?body))", if slot_free_in("0", "body")),
+        rw!("map-fusion"; "(app (app map ?f) (app (app map ?g) ?arg))" => "(app (app map (lam $0 (app ?f (app ?g (var $0))))) ?arg)"),
+        rw!("map-fission"; "(app map (lam $0 (app ?f ?gx)))" => "(lam $2 (app (app map ?f) (app (app map (lam $0 ?gx)) (var $2))))", if !slot_free_in("0", "f"))
     ]
+}
+
+#[test]
+fn parse_rules() {
+    rules();
 }
