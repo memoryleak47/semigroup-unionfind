@@ -291,9 +291,11 @@ macro_rules! rw {
     ($name:expr; $lhs:expr => $rhs:expr) => {
         (parse($lhs), pattern_applier(parse($rhs)))
     };
+    ($name:expr; $lhs:expr => $rhs:expr, if ! $cond:expr) => {
+        (parse($lhs), cond_pattern_applier(parse($rhs), |lhs, subst, eg| !$cond(lhs, subst, eg)))
+    };
     ($name:expr; $lhs:expr => $rhs:expr, if $cond:expr) => {
-        // TODO support side-conditions
-        (parse($lhs), pattern_applier(parse($rhs)))
+        (parse($lhs), cond_pattern_applier(parse($rhs), $cond))
     };
 }
 
@@ -310,6 +312,19 @@ fn rules() -> Vec<Rule<Slotted>> {
         rw!("map-fission"; "(app map (lam $0 (app ?f ?gx)))" => "(lam $2 (app (app map ?f) (app (app map (lam $0 ?gx)) (var $2))))", if !slot_free_in("0", "f"))
     ]
 }
+
+pub fn slot_free_in(slot: &str, var: &str) -> impl Cond {
+    let s: Slot = slot.parse::<usize>().unwrap();
+    let var = Symbol::from(var);
+    move |_, subst, _| subst[&var].0.vals().all(|x| x != s)
+}
+
+pub fn or(x: impl Cond, y: impl Cond) -> impl Cond {
+    move |lhs, subst, eg| x(lhs, subst, eg) || y(lhs, subst, eg)
+}
+
+pub trait Cond: Fn(&(SlotMap, Id), &Subst<Slotted>, &EGraph<Slotted>) -> bool + 'static {}
+impl<T> Cond for T where T: Fn(&(SlotMap, Id), &Subst<Slotted>, &EGraph<Slotted>) -> bool + 'static {}
 
 #[test]
 fn parse_rules() {
