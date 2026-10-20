@@ -141,6 +141,8 @@ enum SlottedLang {
     Lam(Slot, (SlotMap, Id)),
     App((SlotMap, Id), (SlotMap, Id)),
     Var(Slot),
+    Let((SlotMap, Id), Slot, (SlotMap, Id)),
+    Number(u32),
     Symbol(Symbol),
 }
 
@@ -206,7 +208,10 @@ impl Analysis for Slotted {
                 let g = SlotMap::mk([(0, *x)].into_iter());
                 (g, Either::L(SlottedLang::Var(0)))
             },
-            SlottedLang::Symbol(_) => (SlotMap::identity(), Either::L(n.clone())),
+            SlottedLang::Let(t, v, b) => {
+                todo!()
+            },
+            SlottedLang::Number(_)|SlottedLang::Symbol(_) => (SlotMap::identity(), Either::L(n.clone())),
         }
     }
 
@@ -215,7 +220,8 @@ impl Analysis for Slotted {
             SlottedLang::Lam(x1, x2) => &uf.get_semilattice(x2).slots - &std::iter::once(*x1).collect::<HashSet<_>>(),
             SlottedLang::App(x1, x2) => &uf.get_semilattice(x1).slots | &uf.get_semilattice(x2).slots,
             SlottedLang::Var(x) => std::iter::once(*x).collect(),
-            SlottedLang::Symbol(_) => std::iter::empty().collect(),
+            SlottedLang::Let(t, v, b) => &uf.get_semilattice(t).slots | &(&uf.get_semilattice(b).slots - &std::iter::once(*v).collect::<HashSet<_>>()),
+            SlottedLang::Number(_)|SlottedLang::Symbol(_) => std::iter::empty().collect(),
         };
         let mut group = HashSet::new();
         group.insert(SlotMap::identity());
@@ -225,8 +231,8 @@ impl Analysis for Slotted {
     fn children_mut(n: &mut Self::L) -> Box<[&mut (SlotMap, Id)]> {
         match n {
             SlottedLang::Lam(_, x2) => Box::new([x2]),
-            SlottedLang::App(x1, x2) => Box::new([x1, x2]),
-            SlottedLang::Var(_)|SlottedLang::Symbol(_) => Box::new([]),
+            SlottedLang::App(x1, x2)|SlottedLang::Let(x1, _, x2) => Box::new([x1, x2]),
+            SlottedLang::Var(_)|SlottedLang::Number(_)|SlottedLang::Symbol(_) => Box::new([]),
         }
     }
 
@@ -235,6 +241,8 @@ impl Analysis for Slotted {
             SlottedLang::Lam(..) => format!("(lam {} {})", &children[0], &children[1]),
             SlottedLang::App(..) => format!("(app {} {})", &children[0], &children[1]),
             SlottedLang::Var(x) => format!("(var {x})"),
+            SlottedLang::Let(_, v, _) => format!("(let {} {v} {})", &children[0], &children[1]),
+            SlottedLang::Number(s) => s.to_string(),
             SlottedLang::Symbol(s) => s.to_string(),
         }
     }
@@ -244,6 +252,7 @@ impl Analysis for Slotted {
             (SlottedLang::Lam(..),SlottedLang::Lam(..)) => true,
             (SlottedLang::App(..),SlottedLang::App(..)) => true,
             (SlottedLang::Var(..),SlottedLang::Var(..)) => true,
+            (SlottedLang::Number(n1),SlottedLang::Number(n2)) => n1 == n2,
             (SlottedLang::Symbol(s1),SlottedLang::Symbol(s2)) => s1 == s2,
             _ => false,
         }
