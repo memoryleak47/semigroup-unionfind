@@ -16,8 +16,8 @@ impl SlotMap {
         SlotMap { v }
     }
 
-    pub fn keys(&self, x: Slot) -> impl Iterator<Item=Slot> { self.v.iter().map(|(k, _)| *k) }
-    pub fn vals(&self, x: Slot) -> impl Iterator<Item=Slot> { self.v.iter().map(|(_, v)| *v) }
+    pub fn keys(&self) -> impl Iterator<Item=Slot> { self.v.iter().map(|(k, _)| *k) }
+    pub fn vals(&self) -> impl Iterator<Item=Slot> { self.v.iter().map(|(_, v)| *v) }
 
     pub fn get(&self, x: Slot) -> Option<Slot> {
         self.iter().find(|(a, _)| *a == x).map(|(_, b)| b)
@@ -209,7 +209,28 @@ impl Analysis for Slotted {
                 (g, Either::L(SlottedLang::Var(0)))
             },
             SlottedLang::Let(t, v, b) => {
-                todo!()
+                let t = uf.find(t.clone());
+                let b = uf.find(b.clone());
+
+                assert!(t.0.vals().all(|a| a != *v), "If this panics, we'll have to refresh v before canonizing this e-node");
+
+                let mut slots_t: Vec<Slot> = uf.get_leader_semilattice(t.1).slots.iter().copied().collect();
+                slots_t.sort();
+                let it1 = slots_t.into_iter().flat_map(|x| t.0.get(x));
+
+                let it2 = std::iter::once(*v);
+
+                let mut slots_b: Vec<Slot> = uf.get_leader_semilattice(b.1).slots.iter().copied().collect();
+                slots_b.sort();
+                let it3 = slots_b.into_iter().flat_map(|x| b.0.get(x));
+
+                let it = it1.chain(it2).chain(it3);
+                let d = canon_shape(it);
+
+                let mt = SlotMap::compose(&d, &t.0);
+                let mb = SlotMap::compose(&d, &b.0);
+                let vv = d.get(*v).unwrap();
+                (d.inverse(), Either::L(SlottedLang::Let((mt, t.1), vv, (mb, b.1))))
             },
             SlottedLang::Number(_)|SlottedLang::Symbol(_) => (SlotMap::identity(), Either::L(n.clone())),
         }
