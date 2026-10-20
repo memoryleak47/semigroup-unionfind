@@ -141,7 +141,7 @@ enum SlottedLang {
     Lam(Slot, (SlotMap, Id)),
     App((SlotMap, Id), (SlotMap, Id)),
     Var(Slot),
-    Sym(Symbol),
+    Symbol(Symbol),
 }
 
 /// Slotted ///
@@ -206,7 +206,7 @@ impl Analysis for Slotted {
                 let g = SlotMap::mk([(0, *x)].into_iter());
                 (g, Either::L(SlottedLang::Var(0)))
             },
-            SlottedLang::Sym(_) => (SlotMap::identity(), Either::L(n.clone())),
+            SlottedLang::Symbol(_) => (SlotMap::identity(), Either::L(n.clone())),
         }
     }
 
@@ -215,7 +215,7 @@ impl Analysis for Slotted {
             SlottedLang::Lam(x1, x2) => &uf.get_semilattice(x2).slots - &std::iter::once(*x1).collect::<HashSet<_>>(),
             SlottedLang::App(x1, x2) => &uf.get_semilattice(x1).slots | &uf.get_semilattice(x2).slots,
             SlottedLang::Var(x) => std::iter::once(*x).collect(),
-            SlottedLang::Sym(_) => std::iter::empty().collect(),
+            SlottedLang::Symbol(_) => std::iter::empty().collect(),
         };
         let mut group = HashSet::new();
         group.insert(SlotMap::identity());
@@ -226,7 +226,7 @@ impl Analysis for Slotted {
         match n {
             SlottedLang::Lam(_, x2) => Box::new([x2]),
             SlottedLang::App(x1, x2) => Box::new([x1, x2]),
-            SlottedLang::Var(_)|SlottedLang::Sym(_) => Box::new([]),
+            SlottedLang::Var(_)|SlottedLang::Symbol(_) => Box::new([]),
         }
     }
 
@@ -235,7 +235,7 @@ impl Analysis for Slotted {
             SlottedLang::Lam(..) => format!("(lam {} {})", &children[0], &children[1]),
             SlottedLang::App(..) => format!("(app {} {})", &children[0], &children[1]),
             SlottedLang::Var(x) => format!("(var {x})"),
-            SlottedLang::Sym(s) => s.to_string(),
+            SlottedLang::Symbol(s) => s.to_string(),
         }
     }
 
@@ -244,7 +244,7 @@ impl Analysis for Slotted {
             (SlottedLang::Lam(..),SlottedLang::Lam(..)) => true,
             (SlottedLang::App(..),SlottedLang::App(..)) => true,
             (SlottedLang::Var(..),SlottedLang::Var(..)) => true,
-            (SlottedLang::Sym(s1),SlottedLang::Sym(s2)) => s1 == s2,
+            (SlottedLang::Symbol(s1),SlottedLang::Symbol(s2)) => s1 == s2,
             _ => false,
         }
     }
