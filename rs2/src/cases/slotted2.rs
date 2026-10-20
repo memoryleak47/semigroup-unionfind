@@ -149,6 +149,18 @@ enum SlottedLang {
 #[derive(Debug)]
 struct Slotted;
 
+fn canon_shape(it: impl Iterator<Item=Slot>) -> SlotMap {
+    let mut d = HashMap::new();
+
+    // d :: slots(n) -> SHAPE
+    for s in it {
+        if !d.contains_key(&s) {
+            d.insert(s, d.len());
+        }
+    }
+    SlotMap::mk(d.into_iter())
+}
+
 impl Analysis for Slotted {
     type G = SlotMap;
     type S = SlottedData;
@@ -158,9 +170,6 @@ impl Analysis for Slotted {
         let f = |x1: &(SlotMap, Id), x2: &(SlotMap, Id), cb: fn((SlotMap, Id), (SlotMap, Id)) -> SlottedLang| {
             let (g1, i1) = uf.find(x1.clone());
             let (g2, i2) = uf.find(x2.clone());
-
-            let mut d = HashMap::new();
-            // d :: slots(n) -> SHAPE
 
             let mut slots1: Vec<Slot> = uf.get_leader_semilattice(i1).slots.iter().copied().collect();
             slots1.sort();
@@ -172,12 +181,8 @@ impl Analysis for Slotted {
 
             let it = it1.chain(it2);
 
-            for s in it {
-                if !d.contains_key(&s) {
-                    d.insert(s, d.len());
-                }
-            }
-            let d = SlotMap::mk(d.into_iter());
+            let d = canon_shape(it);
+
             let m1 = SlotMap::compose(&d, &g1);
             let m1 = canon((m1, i1), uf);
 
