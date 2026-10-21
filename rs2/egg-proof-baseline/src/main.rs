@@ -4,7 +4,7 @@ type L = SymbolLang;
 
 pub fn rules() -> Vec<Rewrite<L, ()>> {
     vec![
-        rewrite!("add-neg"; "(add (neg ?a) ?a)" => "?a"),
+        rewrite!("add-neg"; "(add (neg ?a) ?a)" => "zero"),
         rewrite!("add-zero"; "(add ?a zero)" => "?a"),
         rewrite!("add-comm"; "(add ?a ?b)" => "(add ?b ?a)"),
         rewrite!("add-assoc1"; "(add (add ?a ?b) ?c)" => "(add ?a (add ?b ?c))"),
