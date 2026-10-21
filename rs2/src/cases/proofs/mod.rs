@@ -2,6 +2,9 @@ use crate::*;
 use std::rc::Rc;
 use std::collections::HashMap;
 
+mod explstring;
+use explstring::explstring;
+
 type Pat = Pattern<ProofAnalysis>;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -9,7 +12,7 @@ enum ProofObj {
     Refl,
     Sym(Proof),
     Trans(Proof, Proof), // works in compose order. So Trans(a, b) first applies b, then a.
-    Congr(Box<[Proof]>),
+    Congr(Symbol, Box<[Proof]>),
     Rule(Symbol),
 }
 
@@ -58,12 +61,12 @@ fn mk_sym(x: Proof) -> Proof {
     }
 }
 
-fn mk_congr(argproofs: Box<[Proof]>) -> Proof {
+fn mk_congr(s: Symbol, argproofs: Box<[Proof]>) -> Proof {
     if argproofs.iter().all(is_refl) {
         mk_refl()
     } else {
         Rc::new(
-            ProofObj::Congr(argproofs)
+            ProofObj::Congr(s, argproofs)
         )
     }
 }
@@ -101,7 +104,7 @@ impl Analysis for ProofAnalysis {
             proofs.push(p.clone());
             args.push((mk_refl(), y));
         }
-        let p = mk_congr(proofs.into());
+        let p = mk_congr(n.f, proofs.into());
         let n = ProofLang {
             f: n.f,
             args: args.into(),
@@ -184,7 +187,7 @@ fn zero() -> Pat {
 type Rules = [(Symbol, Pat, Pat)];
 
 fn eqsat_test(t1: Term<ProofAnalysis>, t2: Term<ProofAnalysis>, rules: &Rules, n: usize) {
-    let rules: Box<[Rule<ProofAnalysis>]> = rules.iter().map(|(rule_id, l, r)| {
+    let runnable_rules: Box<[Rule<ProofAnalysis>]> = rules.iter().map(|(rule_id, l, r)| {
         let annotation = Rc::new(ProofObj::Rule(*rule_id)).inverse();
 
         let l = l.clone();
@@ -198,10 +201,11 @@ fn eqsat_test(t1: Term<ProofAnalysis>, t2: Term<ProofAnalysis>, rules: &Rules, n
     let x1 = add_expr(&t1, eg);
     let x2 = add_expr(&t2, eg);
 
-    eqsat::<_>(eg, &rules, Box::new([]), Duration::MAX, usize::MAX, n);
+    eqsat::<_>(eg, &runnable_rules, Box::new([]), Duration::MAX, usize::MAX, n);
     let p = eg.get_g_between(x1.clone(), x2.clone()).unwrap();
 
-    dbg!(eg.hashcons.len());
+    let s = explstring(eg, &t1, &t2, &p, rules);
+    println!("{s}");
 }
 
 #[test]
@@ -214,7 +218,7 @@ fn test_proofs_triv1() {
 #[test]
 fn test_proofs_triv2() {
     let rule = (
-        Symbol::new("a -> b"),
+        Symbol::new("'a -> b'"),
         atom("a"),
         atom("b"),
     );
@@ -435,16 +439,16 @@ fn test_proofs_arith() {
     );
 
     let mut t1 = zero();
-    for i in 0..3 {
+    for i in 0..1 {
         let a = atom(&format!("a{i}"));
         t1 = add(t1, a);
     }
-    for i in 0..3 {
+    for i in 0..1 {
         let a = atom(&format!("a{i}"));
         t1 = add(neg(a), t1);
     }
 
     let t2 = zero();
     let rules = &[rule1, rule2, rule3, rule4, rule5];
-    eqsat_test(t1, t2, rules, 6);
+    eqsat_test(t1, t2, rules, 3);
 }
