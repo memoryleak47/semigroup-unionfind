@@ -202,6 +202,7 @@ fn eqsat_test(t1: Term<ProofAnalysis>, t2: Term<ProofAnalysis>, rules: &Rules, n
     let x2 = add_expr(&t2, eg);
 
     eqsat::<_>(eg, &runnable_rules, Box::new([]), Duration::MAX, usize::MAX, n);
+    dbg!(eg.hashcons.len());
     let p = eg.get_g_between(x1.clone(), x2.clone()).unwrap();
 
     let s = explstring(eg, &t1, &t2, &p, rules);

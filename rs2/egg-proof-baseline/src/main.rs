@@ -19,7 +19,7 @@ fn main() {
     let rules = rules();
 
     let runner: Runner<L, ()> = Runner::new(()).with_explanations_enabled().with_expr(&t).with_scheduler(SimpleScheduler).with_iter_limit(5).run(&rules);
-    dbg!(&runner.egraph.total_size());
+    dbg!(&runner.egraph.total_number_of_nodes());
     dbg!(&runner.stop_reason);
     assert_eq!(runner.egraph.lookup_expr(&t).unwrap(), runner.egraph.lookup_expr(&t2).unwrap());
 }
