@@ -20,7 +20,7 @@ type Proof = Rc<ProofObj>;
 
 impl Group for Proof {
     fn identity() -> Proof {
-        Rc::new(ProofObj::Refl)
+        mk_refl()
     }
 
     fn compose(l: &Proof, r: &Proof) -> Proof {
@@ -36,9 +36,13 @@ fn is_refl(x: &Proof) -> bool {
     matches!(**x, ProofObj::Refl)
 }
 
+thread_local! {
+    pub static REFL: Proof = Rc::new(ProofObj::Refl);
+}
+
 // smart constructors:
 fn mk_refl() -> Proof {
-    Rc::new(ProofObj::Refl)
+    REFL.with(|refl| refl.clone())
 }
 
 fn mk_trans(x: Proof, y: Proof) -> Proof {
@@ -212,8 +216,12 @@ fn eqsat_test(t1: Term<ProofAnalysis>, t2: Term<ProofAnalysis>, rules: &Rules, n
     dbg!(eg.hashcons.len());
     let p = eg.get_g_between(x1.clone(), x2.clone()).unwrap();
 
-    let s = explstring(eg, &t1, &t2, &p, rules);
-    println!("{s}");
+    const PRINT: bool = false;
+
+    if PRINT {
+        let s = explstring(eg, &t1, &t2, &p, rules);
+        println!("{s}");
+    }
 }
 
 #[test]
@@ -458,5 +466,5 @@ fn test_proofs_arith() {
 
     let t2 = zero();
     let rules = &[rule1, rule2, rule3, rule4, rule5];
-    eqsat_test(t1, t2, rules, 5);
+    eqsat_test(t1, t2, rules, 7);
 }
