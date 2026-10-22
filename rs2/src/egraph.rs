@@ -71,7 +71,7 @@ impl<N: Analysis> EGraph<N> {
 
     pub fn union(&mut self, x: (N::G, Id), y: (N::G, Id)) {
         self.uf.union(x, y);
-        self.rebuild();
+        // We do deferred rebuilding! Does that cause any issues?
     }
 
     pub fn rebuild(&mut self) {
