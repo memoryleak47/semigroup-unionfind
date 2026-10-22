@@ -1,11 +1,14 @@
 use crate::*;
-use std::rc::Rc;
 use std::collections::HashMap;
+use std::cell::RefCell;
 
 mod explstring;
 use explstring::explstring;
 
 type Pat = Pattern<ProofAnalysis>;
+
+#[derive(Clone, Copy, Hash, Debug, PartialEq, Eq)]
+struct Proof(usize);
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 enum ProofObj {
@@ -16,7 +19,15 @@ enum ProofObj {
     Rule(Symbol),
 }
 
-type Proof = Rc<ProofObj>;
+#[derive(Default)]
+struct ProofTable {
+    hashcons: HashMap<ProofObj, Proof>,
+    vec: Vec<ProofObj>,
+}
+
+thread_local! {
+    static PROOF_TABLE: RefCell<ProofTable> = RefCell::new(ProofTable::default());
+}
 
 impl Group for Proof {
     fn identity() -> Proof {
@@ -32,44 +43,59 @@ impl Group for Proof {
     }
 }
 
-fn is_refl(x: &Proof) -> bool {
-    matches!(**x, ProofObj::Refl)
+fn is_refl(x: Proof) -> bool {
+    matches!(raw_get(x), ProofObj::Refl)
 }
 
-thread_local! {
-    pub static REFL: Proof = Rc::new(ProofObj::Refl);
+fn raw_add(o: ProofObj) -> Proof {
+    PROOF_TABLE.with(|tab| {
+        let mut tab = tab.borrow_mut();
+        if let Some(p) = tab.hashcons.get(&o) { return *p }
+        else {
+            let p = Proof(tab.vec.len());
+            tab.vec.push(o.clone());
+            tab.hashcons.insert(o, p);
+            p
+        }
+    })
+}
+
+fn raw_get(p: Proof) -> ProofObj {
+    PROOF_TABLE.with(|tab| {
+        tab.borrow().vec[p.0].clone()
+    })
 }
 
 // smart constructors:
 fn mk_refl() -> Proof {
-    REFL.with(|refl| refl.clone())
+    raw_add(ProofObj::Refl)
 }
 
 fn mk_trans(x: Proof, y: Proof) -> Proof {
-    if is_refl(&x) {
+    if is_refl(x) {
         y
-    } else if is_refl(&y) {
+    } else if is_refl(y) {
         x
     } else {
-        Rc::new(ProofObj::Trans(x, y))
+        raw_add(ProofObj::Trans(x, y))
     }
 }
 
 fn mk_sym(x: Proof) -> Proof {
-    if let ProofObj::Sym(xx) = &*x {
+    if let ProofObj::Sym(xx) = raw_get(x) {
         xx.clone()
-    } else if is_refl(&x) {
+    } else if is_refl(x) {
         mk_refl()
     } else {
-        Rc::new(ProofObj::Sym(x))
+        raw_add(ProofObj::Sym(x))
     }
 }
 
 fn mk_congr(s: Symbol, argproofs: Box<[Proof]>) -> Proof {
-    if argproofs.iter().all(is_refl) {
+    if argproofs.iter().copied().all(is_refl) {
         mk_refl()
     } else {
-        Rc::new(
+        raw_add(
             ProofObj::Congr(s, argproofs)
         )
     }
@@ -137,7 +163,7 @@ impl Analysis for ProofAnalysis {
 }
 
 fn justify((p, x): (Proof, Id), j: Symbol) -> (Proof, Id) {
-    let p2 = Rc::new(ProofObj::Rule(j));
+    let p2 = raw_add(ProofObj::Rule(j));
     (Proof::compose(&p2, &p), x)
 }
 
@@ -199,7 +225,7 @@ type Rules = [(Symbol, Pat, Pat)];
 
 fn eqsat_test(t1: Term<ProofAnalysis>, t2: Term<ProofAnalysis>, rules: &Rules, n: usize) {
     let runnable_rules: Box<[Rule<ProofAnalysis>]> = rules.iter().map(|(rule_id, l, r)| {
-        let annotation = Rc::new(ProofObj::Rule(*rule_id)).inverse();
+        let annotation = raw_add(ProofObj::Rule(*rule_id)).inverse();
 
         let l = l.clone();
         let r = Pattern::G(annotation, Box::new(r.clone()));

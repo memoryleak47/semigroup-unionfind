@@ -13,7 +13,7 @@ pub fn explstring(eg: &EGraph, lhs: &Term, rhs: &Term, p: &Proof, rules: &Rules)
     let mut mvar_counter = 0;
     let mut umap = UnifyMap::default();
 
-    let mut e = eval(&proof, &mut mvar_counter, &mut umap, rules);
+    let mut e = eval(proof, &mut mvar_counter, &mut umap, rules);
 
     unify(e.first(), &lhs, &mut umap);
     unify(&e.last, &rhs, &mut umap);
@@ -110,8 +110,8 @@ fn eval_trans(e2: Expl, e1: Expl, umap: &mut UnifyMap) -> Expl {
     }
 }
 
-fn eval(p: &Proof, mvar_counter: &mut usize, umap: &mut UnifyMap, rules: &Rules) -> Expl {
-    match &**p {
+fn eval(p: Proof, mvar_counter: &mut usize, umap: &mut UnifyMap, rules: &Rules) -> Expl {
+    match raw_get(p) {
         ProofObj::Refl => Expl {
             vec: Vec::new(),
             last: Pattern::PVar(fresh_mvar(mvar_counter)),
@@ -137,8 +137,8 @@ fn eval(p: &Proof, mvar_counter: &mut usize, umap: &mut UnifyMap, rules: &Rules)
         ProofObj::Congr(si, children) => {
             let mut cs = Vec::new();
             for (i, c) in children.iter().enumerate() {
-                let inner = eval(c, mvar_counter, umap, rules);
-                let wrapped = wrap(inner, mvar_counter, i, children.len(), *si);
+                let inner = eval(*c, mvar_counter, umap, rules);
+                let wrapped = wrap(inner, mvar_counter, i, children.len(), si);
                 cs.push(wrapped);
             }
             let mut total = cs.pop().unwrap();
@@ -148,7 +148,7 @@ fn eval(p: &Proof, mvar_counter: &mut usize, umap: &mut UnifyMap, rules: &Rules)
             total
         },
         ProofObj::Rule(rule_name) => {
-            let (name, lhs, rhs) = rules.iter().find(|(n, _, _)| n == rule_name).unwrap();
+            let (name, lhs, rhs) = rules.iter().find(|(n, _, _)| *n == rule_name).unwrap();
             let step = ExplStep { rule: *name, forward: true, pos: Vec::new() };
 
             let mut lhs = lhs.clone();
