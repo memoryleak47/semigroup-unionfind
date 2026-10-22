@@ -123,6 +123,13 @@ impl Analysis for ProofAnalysis {
             subst.into_iter().map(|(k, v)| (k, (mk_refl(), v))).collect()
         }).collect()
     }
+
+    fn prettyprint(l: &Self::L, child_strings: Box<[String]>) -> String {
+        if child_strings.is_empty() { l.f.to_string() }
+        else {
+            format!("({} {})", l.f, child_strings.join(" "))
+        }
+    }
 }
 
 fn justify((p, x): (Proof, Id), j: Symbol) -> (Proof, Id) {
