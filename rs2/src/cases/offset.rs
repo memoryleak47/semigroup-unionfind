@@ -14,10 +14,6 @@ impl Offset {
 }
 
 impl Group for Offset {
-    fn identity() -> Offset {
-        Offset(0)
-    }
-
     fn compose(l: &Offset, r: &Offset) -> Offset {
         Offset(l.0 + r.0)
     }
@@ -25,6 +21,8 @@ impl Group for Offset {
     fn inverse(&self) -> Offset {
         Offset(-self.0)
     }
+
+    fn identity() -> Offset { Offset(0) }
 }
 
 #[derive(Clone, Debug)]
@@ -62,6 +60,11 @@ impl Semilattice for ConstProp {
     fn contains_self_edge(&self, g: &Self::G) -> bool {
         *g == Offset(0)
     }
+
+    fn local_identity(&self) -> Offset {
+        Offset(0)
+    }
+
 }
 
 type OffsetId = (Offset, Id);
@@ -99,9 +102,9 @@ impl Analysis for OffsetAnalysis {
                     (None, None) => (Offset(o), Either::L(OffsetLang::Add([(Offset(0), x), (Offset(0), y)]))),
                 }
             },
-            OffsetLang::App([x, y]) => (Offset::identity(), Either::L(OffsetLang::App([uf.find(*x), uf.find(*y)]))),
+            OffsetLang::App([x, y]) => (Offset(0), Either::L(OffsetLang::App([uf.find(*x), uf.find(*y)]))),
             OffsetLang::Const(c) => (Offset(*c), Either::L(OffsetLang::Const(0))),
-            OffsetLang::Symbol(s) => (Offset::identity(), Either::L(OffsetLang::Symbol(*s))),
+            OffsetLang::Symbol(s) => (Offset(0), Either::L(OffsetLang::Symbol(*s))),
         }
     }
 

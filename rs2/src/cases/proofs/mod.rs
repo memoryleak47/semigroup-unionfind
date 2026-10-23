@@ -30,16 +30,16 @@ thread_local! {
 }
 
 impl Group for Proof {
-    fn identity() -> Proof {
-        mk_refl()
-    }
-
     fn compose(l: &Proof, r: &Proof) -> Proof {
         mk_trans(l.clone(), r.clone())
     }
 
     fn inverse(&self) -> Proof {
         mk_sym(self.clone())
+    }
+
+    fn identity() -> Proof {
+        mk_refl()
     }
 }
 
@@ -117,6 +117,11 @@ impl Semilattice for ProofData {
     fn merge(&mut self, other: Self) -> bool { false }
     fn insert_self_edge(&mut self, g: Self::G) {}
     fn contains_self_edge(&self, g: &Self::G) -> bool { true }
+
+    fn local_identity(&self) -> Proof {
+        mk_refl()
+    }
+
 }
 
 struct ProofAnalysis;

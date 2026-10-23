@@ -30,16 +30,16 @@ impl Offset {
 }
 
 impl Group for Offset {
-    fn identity() -> Offset {
-        Offset(0)
-    }
-
     fn compose(l: &Offset, r: &Offset) -> Offset {
         Offset(l.0 + r.0)
     }
 
     fn inverse(&self) -> Offset {
         Offset(-self.0)
+    }
+
+    fn identity() -> Offset {
+        Offset(0)
     }
 }
 
@@ -71,6 +71,10 @@ impl Semilattice for Option<i64> {
 
     fn contains_self_edge(&self, g: &Self::G) -> bool {
         *g == Offset(0)
+    }
+
+    fn local_identity(&self) -> Offset {
+        Offset(0)
     }
 }
 

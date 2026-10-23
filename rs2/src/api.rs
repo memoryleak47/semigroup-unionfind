@@ -1,13 +1,14 @@
 use crate::*;
 
 pub trait Group: Clone + Eq + Debug + Hash + PartialEq {
-    fn identity() -> Self;
-
     // We typically left-multiply stuff with G, so `g*_`.
     // composition is compatible with that order, so that `g1*(g2*x) = (g1*g2)*x = compose(g1, g2)*x`.
     fn compose(_: &Self, _: &Self) -> Self;
 
     fn inverse(&self) -> Self;
+
+    // TODO mostly unused!
+    fn identity() -> Self;
 }
 
 // Note: This Semilattice encodes a subgroup of G.
@@ -20,6 +21,8 @@ pub trait Semilattice: Clone + Debug {
 
     fn insert_self_edge(&mut self, g: Self::G);
     fn contains_self_edge(&self, g: &Self::G) -> bool;
+
+    fn local_identity(&self) -> Self::G;
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]

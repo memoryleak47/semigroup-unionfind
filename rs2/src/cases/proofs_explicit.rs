@@ -16,16 +16,16 @@ enum ProofObj {
 type Proof = Rc<ProofObj>;
 
 impl Group for Proof {
-    fn identity() -> Proof {
-        Rc::new(ProofObj::Refl)
-    }
-
     fn compose(l: &Proof, r: &Proof) -> Proof {
         mk_trans(l.clone(), r.clone())
     }
 
     fn inverse(&self) -> Proof {
         mk_sym(self.clone())
+    }
+
+    fn identity() -> Proof {
+        Rc::new(ProofObj::Refl)
     }
 }
 
@@ -132,6 +132,11 @@ impl Semilattice for Term<ProofAnalysis> {
 
     fn insert_self_edge(&mut self, g: Proof) {}
     fn contains_self_edge(&self, g: &Proof) -> bool { true }
+
+    fn local_identity(&self) -> Proof {
+        Rc::new(ProofObj::Refl)
+    }
+
 }
 
 struct ProofAnalysis;

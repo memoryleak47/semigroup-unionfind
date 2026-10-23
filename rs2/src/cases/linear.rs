@@ -17,13 +17,6 @@ impl Linear {
 }
 
 impl Group for Linear {
-    fn identity() -> Linear {
-        Linear {
-            factor: f(1.0),
-            offset: f(0.0),
-        }
-    }
-
     fn compose(l: &Linear, r: &Linear) -> Linear {
         Linear {
             factor: l.factor*r.factor,
@@ -36,6 +29,17 @@ impl Group for Linear {
             factor: f(1.0) / self.factor,
             offset: -self.offset/self.factor,
         }
+    }
+
+    fn identity() -> Linear {
+        identity()
+    }
+}
+
+fn identity() -> Linear {
+    Linear {
+        factor: f(1.0),
+        offset: f(0.0),
     }
 }
 
@@ -90,6 +94,11 @@ impl Semilattice for ConstProp {
             ConstProp(None) => is_close(g.factor, f(1.0)) && is_close(g.offset, f(0.0)),
         }
     }
+
+    fn local_identity(&self) -> Linear {
+        identity()
+    }
+
 }
 
 type LinearId = (Linear, Id);
@@ -125,7 +134,7 @@ impl Analysis for LinearAnalysis {
         match n {
             LinearLang::Add([x, y]) => {
                 match (uf.get_semilattice(x).0, uf.get_semilattice(y).0) {
-                    (None, None) => (Linear::identity(), Either::L(LinearLang::Add([uf.find(*x), uf.find(*y)]))), // TODO extract common offsets.
+                    (None, None) => (identity(), Either::L(LinearLang::Add([uf.find(*x), uf.find(*y)]))), // TODO extract common offsets.
                     (Some(x), None) => {
                         let (y_g, y) = y;
                         let l = add_offset(*y_g, x);
@@ -141,7 +150,7 @@ impl Analysis for LinearAnalysis {
             },
             LinearLang::Mul([x, y]) => {
                 match (uf.get_semilattice(x).0, uf.get_semilattice(y).0) {
-                    (None, None) => (Linear::identity(), Either::L(LinearLang::Mul([uf.find(*x), uf.find(*y)]))),
+                    (None, None) => (identity(), Either::L(LinearLang::Mul([uf.find(*x), uf.find(*y)]))),
                     (Some(x), None) => {
                         let (y_g, y) = y;
                         let l = add_factor(*y_g, x);
@@ -156,7 +165,7 @@ impl Analysis for LinearAnalysis {
                 }
             },
             LinearLang::Const(c) => (Linear { factor: f(1.0), offset: *c }, Either::L(LinearLang::Const(f(0.0)))),
-            LinearLang::Symbol(s) => (Linear::identity(), Either::L(LinearLang::Symbol(*s))),
+            LinearLang::Symbol(s) => (identity(), Either::L(LinearLang::Symbol(*s))),
         }
     }
 
@@ -189,8 +198,8 @@ fn lintest() {
         offset: f(-4.),
     };
 
-    assert!(Linear::compose(&l, &l.inverse()) == Linear::identity());
-    assert!(Linear::compose(&l.inverse(), &l) == Linear::identity());
+    assert!(Linear::compose(&l, &l.inverse()) == identity());
+    assert!(Linear::compose(&l.inverse(), &l) == identity());
 }
 
 #[test]

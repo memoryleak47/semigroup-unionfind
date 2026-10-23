@@ -37,8 +37,6 @@ impl SlotMap {
 }
 
 impl Group for SlotMap {
-    fn identity() -> SlotMap { SlotMap::mk(std::iter::empty()) }
-
     // l*(r*_)
     fn compose(l: &SlotMap, r: &SlotMap) -> SlotMap {
         SlotMap::mk(r.iter().filter_map(|(x, y)| l.get(y).map(|y| (x, y))))
@@ -46,6 +44,10 @@ impl Group for SlotMap {
 
     fn inverse(&self) -> SlotMap {
         SlotMap::mk(self.iter().map(|(x, y)| (y, x)))
+    }
+
+    fn identity() -> SlotMap {
+        SlotMap::mk(std::iter::empty())
     }
 }
 
@@ -90,6 +92,8 @@ impl Semilattice for SlottedData {
         let Some(g) = restrict(g, &self.slots) else { return false };
         self.group.contains(&g)
     }
+
+    fn local_identity(&self) -> SlotMap { SlotMap::mk(self.slots.iter().map(|s| (*s, *s))) }
 }
 
 // Returns None, if some slots go in or out of `slots`.
@@ -129,7 +133,7 @@ fn complete_data(d: &mut SlottedData) {
     }
 
     // saturate group.
-    d.group.insert(SlotMap::identity());
+    d.group.insert(d.local_identity());
     loop {
         let old_group = std::mem::take(&mut d.group);
         for p1 in &old_group {
@@ -240,7 +244,7 @@ impl Analysis for Slotted {
                 let vv = d.get(*v).unwrap();
                 (d.inverse(), Either::L(SlottedLang::Let((mt, t.1), vv, (mb, b.1))))
             },
-            SlottedLang::Number(_)|SlottedLang::Symbol(_) => (SlotMap::identity(), Either::L(n.clone())),
+            SlottedLang::Number(_)|SlottedLang::Symbol(_) => (SlotMap::mk(std::iter::empty()), Either::L(n.clone())),
         }
     }
 
@@ -253,7 +257,7 @@ impl Analysis for Slotted {
             SlottedLang::Number(_)|SlottedLang::Symbol(_) => std::iter::empty().collect(),
         };
         let mut group = HashSet::new();
-        group.insert(SlotMap::identity());
+        group.insert(SlotMap::mk(slots.iter().map(|s| (*s, *s))));
         SlottedData { slots, group }
     }
 

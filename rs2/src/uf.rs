@@ -25,8 +25,8 @@ impl<S: Semilattice> Unionfind<S> {
     pub fn makeset(&mut self, s: S) -> Id {
         let i = self.next_id();
         self.v.push(UFClass {
+            leader: (S::local_identity(&s), i),
             s,
-            leader: (S::G::identity(), i),
         });
         i
     }
@@ -78,7 +78,7 @@ impl<S: Semilattice> Unionfind<S> {
     }
 
     pub fn get_id_semilattice(&self, x: Id) -> S {
-        self.get_semilattice(&(S::G::identity(), x))
+        self.get_semilattice(&self.v[x.0].leader)
     }
 
     pub fn get_semilattice(&self, gx: &(S::G, Id)) -> S {

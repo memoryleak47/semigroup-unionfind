@@ -32,8 +32,9 @@ impl<N: Analysis> EGraph<N> {
             (N::G::compose(&g, &g2), *x)
         } else {
             let s = N::mk(&n2, self.uf.next_id(), &self.uf);
+            let identity = N::S::local_identity(&s);
             let x = self.uf.makeset(s);
-            self.hashcons.insert(n2, (N::G::identity(), x));
+            self.hashcons.insert(n2, (identity, x));
             (g, x)
         }
     }
@@ -81,8 +82,9 @@ impl<N: Analysis> EGraph<N> {
             for x in self.classes() {
                 let s = self.uf.get_leader_semilattice(x);
                 if let Some(n) = N::reify(s) {
+                    let identity = N::S::local_identity(&s);
                     let x2 = self.add(&n);
-                    dirty |= self.uf.union(x2, (N::G::identity(), x));
+                    dirty |= self.uf.union(x2, (identity, x));
                 }
             }
 
@@ -142,7 +144,7 @@ impl<N: Analysis> EGraph<N> {
 
     pub fn nodes_of_bare(&self, x: Id) -> Box<[(N::G, N::L)]> {
         // x has to be a leader.
-        assert!(self.find((N::G::identity(), x)).1 == x);
+        assert!(self.uf.find1(x).1 == x);
 
         let it1 = self.nodes.get(&x).into_iter().map(|x| x.iter()).flatten().map(|i| {
             let (node, (g, _id)) = self.hashcons.get_index(*i).unwrap();

@@ -45,8 +45,6 @@ impl SlotMap {
 }
 
 impl Group for SlotMap {
-    fn identity() -> SlotMap { SlotMap::mk(std::iter::empty()) }
-
     // l*(r*_)
     fn compose(l: &SlotMap, r: &SlotMap) -> SlotMap {
         let set = l.support().chain(r.support()).collect::<HashSet<Slot>>();
@@ -58,6 +56,10 @@ impl Group for SlotMap {
 
     fn inverse(&self) -> SlotMap {
         SlotMap::mk(self.iter().map(|(x, y)| (y, x)))
+    }
+
+    fn identity() -> SlotMap {
+        SlotMap::mk(std::iter::empty())
     }
 }
 
@@ -102,7 +104,11 @@ impl Semilattice for SlottedData {
         let Some(g) = restrict(g, &self.slots) else { return false };
         self.group.contains(&g)
     }
+
+    fn local_identity(&self) -> SlotMap { identity() }
 }
+
+fn identity() -> SlotMap { SlotMap::mk(std::iter::empty()) }
 
 // Returns None, if some slots go in or out of `slots`.
 fn restrict(m: &SlotMap, slots: &HashSet<Slot>) -> Option<SlotMap> {
@@ -141,7 +147,7 @@ fn complete_data(d: &mut SlottedData) {
     }
 
     // saturate group.
-    d.group.insert(SlotMap::identity());
+    d.group.insert(SlotMap::mk(std::iter::empty()));
     loop {
         let old_group = std::mem::take(&mut d.group);
         for p1 in &old_group {
@@ -210,13 +216,13 @@ impl Analysis for Slotted {
             SlottedLang::Lam(x1, x2) => f(x1, x2, SlottedLang::Lam),
             SlottedLang::App(x1, x2) => f(x1, x2, SlottedLang::App),
             SlottedLang::Var(x) => {
-                if *x == 0 { (SlotMap::identity(), Either::L(n.clone())) }
+                if *x == 0 { (identity(), Either::L(n.clone())) }
                 else {
                     let g = SlotMap::mk([(*x, 0), (0, *x)].into_iter());
                     (g, Either::L(SlottedLang::Var(0)))
                 }
             },
-            SlottedLang::Sym(_) => (SlotMap::identity(), Either::L(n.clone())),
+            SlottedLang::Sym(_) => (identity(), Either::L(n.clone())),
         }
     }
 
@@ -228,7 +234,7 @@ impl Analysis for Slotted {
             SlottedLang::Sym(_) => std::iter::empty().collect(),
         };
         let mut group = HashSet::new();
-        group.insert(SlotMap::identity());
+        group.insert(identity());
         SlottedData { slots, group }
     }
 
@@ -269,7 +275,7 @@ impl Analysis for Slotted {
             let mut state = State::default();
             add_diseqs(&pslots, &mut state);
 
-            for st in ematch_impl(SlotMap::identity(), &skel, pattern, slots, eg, state) {
+            for st in ematch_impl(identity(), &skel, pattern, slots, eg, state) {
                 for st in final_refine(st, eg) {
                     out.push(find_subst(st, eg));
                 }
@@ -524,7 +530,7 @@ fn slot_find(mut x: Slot, state: &State) -> Slot {
 }
 
 type Pat = Pattern<Slotted>;
-fn nil() -> (SlotMap, Id) { (SlotMap::identity(), Id(0)) }
+fn nil() -> (SlotMap, Id) { (identity(), Id(0)) }
 fn mk_lam(p1: Pat, p2: Pat) -> Pat { Pattern::Node(SlottedLang::Lam(nil(), nil()), Box::new([p1, p2])) }
 fn mk_app(p1: Pat, p2: Pat) -> Pat { Pattern::Node(SlottedLang::App(nil(), nil()), Box::new([p1, p2])) }
 
