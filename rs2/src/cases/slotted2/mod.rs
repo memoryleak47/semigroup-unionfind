@@ -267,10 +267,10 @@ impl Analysis for Slotted {
 
     fn prettyprint(n: &Self::L, children: Box<[String]>) -> String {
         match n {
-            SlottedLang::Lam(v, _) => format!("(lam {v} {})", &children[0]),
+            SlottedLang::Lam(v, _) => format!("(lam ${v} {})", &children[0]),
             SlottedLang::App(..) => format!("(app {} {})", &children[0], &children[1]),
-            SlottedLang::Var(x) => format!("(var {x})"),
-            SlottedLang::Let(_, v, _) => format!("(let {} {v} {})", &children[0], &children[1]),
+            SlottedLang::Var(x) => format!("(var ${x})"),
+            SlottedLang::Let(_, v, _) => format!("(let {} ${v} {})", &children[0], &children[1]),
             SlottedLang::Number(s) => s.to_string(),
             SlottedLang::Symbol(s) => s.to_string(),
         }
