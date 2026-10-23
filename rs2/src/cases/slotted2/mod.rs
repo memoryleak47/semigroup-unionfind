@@ -267,7 +267,7 @@ impl Analysis for Slotted {
 
     fn prettyprint(n: &Self::L, children: Box<[String]>) -> String {
         match n {
-            SlottedLang::Lam(..) => format!("(lam {} {})", &children[0], &children[1]),
+            SlottedLang::Lam(v, _) => format!("(lam {v} {})", &children[0]),
             SlottedLang::App(..) => format!("(app {} {})", &children[0], &children[1]),
             SlottedLang::Var(x) => format!("(var {x})"),
             SlottedLang::Let(_, v, _) => format!("(let {} {v} {})", &children[0], &children[1]),
@@ -338,4 +338,23 @@ impl<T> Cond for T where T: Fn(&(SlotMap, Id), &Subst<Slotted>, &EGraph<Slotted>
 #[test]
 fn parse_rules() {
     rules();
+}
+
+pub fn run() {
+    let t1 = parse("(lam $61 (lam $62 (lam $63 (lam $64 (app map (app map (lam $1 (app (var $64) (app (var $63) (app (var $62) (app (var $61) (var $1))))))))))))");
+    let t2 = parse("(lam $61 (lam $62 (lam $63 (lam $64 (lam $4 (app (app map (app map (lam $2 (app (var $64) (app (var $63) (var $2)))))) (app (app map (app map (lam $3 (app (var $62) (app (var $61) (var $3)))))) (var $4))))))))");
+
+    let mut eg = EGraph::new();
+    let c1 = add_expr(&t1, &mut eg);
+    let rules = rules();
+    let hook = Box::new(move |eg: &mut EGraph<Slotted>| -> Result<(), StopReason> {
+        let c1 = c1.clone();
+        let Some(c2) = eg.lookup_term(&t2) else { return Ok(()) };
+        if eg.is_equal(c1, c2) { return Err(StopReason::Other("done!".to_string())) }
+        Ok(())
+    });
+    dbg!(eg.hashcons.len());
+    let stop_reason = eqsat(&mut eg, &rules, Box::new([hook]), Duration::from_secs(60), usize::MAX, 10);
+    dbg!(eg.hashcons.len());
+    dbg!(stop_reason);
 }

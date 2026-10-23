@@ -55,7 +55,7 @@ pub fn parse(s: &str) -> Pat {
             },
             [Unparsed(x), ..] => {
                 if x.starts_with("?") {
-                    things[i] = Thing::Parsed(Pat::PVar(crate::Symbol::new(x)));
+                    things[i] = Thing::Parsed(Pat::PVar(crate::Symbol::new(&x[1..])));
                 } else if x.starts_with("$") {
                     things[i] = Thing::Slot(x[1..].parse::<usize>().unwrap());
                 } else if let Ok(n) = x.parse::<u32>() {

@@ -24,6 +24,7 @@ pub fn cond_pattern_applier<N: Analysis + 'static>(rhs_pat: Pattern<N>, cond: im
 // Terms are just patterns that don't contain PVars.
 pub type Term<N: Analysis> = Pattern<N>;
 
+#[derive(Debug)]
 pub enum StopReason {
     NodeLimit,
     TimeLimit,

@@ -32,13 +32,13 @@ def generate(n, m, o, VARS):
     def fn_with_args(f, o):
         out = f
         for i in range(1, o+1):
-            v = var_wrapper(f"p{i}")
+            v = var_wrapper(f"5{i}")
             out = f"(app {out} {v})"
         return out
 
     # f1 ° ... ° fm
     def chained_fns(it, o):
-        it = [ fn_with_args(var_wrapper(f"fn{i}"), o) for i in it ]
+        it = [ fn_with_args(var_wrapper(f"6{i}"), o) for i in it ]
         if len(it) == 1:
             return it[0]
 
@@ -72,10 +72,10 @@ def generate(n, m, o, VARS):
         if VARS:
             l = list(range(1, o+1))
             for i in l[::-1]:
-                arg = f"(lam $p{i} {arg})"
+                arg = f"(lam $5{i} {arg})"
             l = list(range(1, 2*m+1))
             for i in l[::-1]:
-                arg = f"(lam $fn{i} {arg})"
+                arg = f"(lam $6{i} {arg})"
         return arg
 
     lhs = generate_lhs(n, m, o)
