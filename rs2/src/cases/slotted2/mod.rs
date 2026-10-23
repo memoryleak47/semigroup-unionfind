@@ -319,7 +319,7 @@ fn rules() -> Vec<Rule<Slotted>> {
         rw!("let-intro"; "(app (lam $0 ?body) ?e)" => "(let ?e $0 ?body)"),
         rw!("let-unused"; "(let ?t $0 ?b)" => "?b", if !slot_free_in("0", "b")),
         rw!("let-var-same"; "(let ?e $0 (var $0))" => "?e"),
-        rw!("let-app";"(let ?e $0 (app ?a ?b))"=>"(app (let ?e $0 ?ae) (let ?e $0 ?b))", if or(slot_free_in("0", "a"), slot_free_in("0", "b"))),
+        rw!("let-app";"(let ?e $0 (app ?a ?b))"=>"(app (let ?e $0 ?a) (let ?e $0 ?b))", if or(slot_free_in("0", "a"), slot_free_in("0", "b"))),
         rw!("let-lam-diff"; "(let ?e $0 (lam $1 ?body))"=>"(lam $1 (let ?e $0 ?body))", if slot_free_in("0", "body")),
         rw!("map-fusion"; "(app (app map ?f) (app (app map ?g) ?arg))" => "(app (app map (lam $0 (app ?f (app ?g (var $0))))) ?arg)"),
         rw!("map-fission"; "(app map (lam $0 (app ?f ?gx)))" => "(lam $2 (app (app map ?f) (app (app map (lam $0 ?gx)) (var $2))))", if !slot_free_in("0", "f"))
