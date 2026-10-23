@@ -3,6 +3,9 @@ use crate::*;
 mod parse;
 pub use parse::parse;
 
+mod ematch;
+pub use ematch::*;
+
 type Slot = usize;
 
 /// SlotMap ///
@@ -21,6 +24,8 @@ impl SlotMap {
 
     pub fn keys(&self) -> impl Iterator<Item=Slot> { self.v.iter().map(|(k, _)| *k) }
     pub fn vals(&self) -> impl Iterator<Item=Slot> { self.v.iter().map(|(_, v)| *v) }
+
+    pub fn vals_mut(&mut self) -> impl Iterator<Item=&mut Slot> { self.v.iter_mut().map(|(_, v)| v) }
 
     pub fn get(&self, x: Slot) -> Option<Slot> {
         self.iter().find(|(a, _)| *a == x).map(|(_, b)| b)
@@ -282,8 +287,12 @@ impl Analysis for Slotted {
         }
     }
 
-    fn ematch(eg: &EGraph<Self>, id: Id, pattern: &Pattern<Self>) -> Vec<Subst<Self>> {
-        todo!()
+    fn ematch(eg: &EGraph<Self>, id: Id, pat: &Pattern<Self>) -> Vec<Subst<Self>> {
+        let st = State::default();
+        let default = SlotMap::mk(eg.get_leader_semilattice(id).slots.iter().map(|s| (*s, *s)));
+
+        // shouldn't I use the relation here?
+        ematch_impl((default, id), pat, st, eg).into_iter().map(|st| st.subst).collect()
     }
 }
 
