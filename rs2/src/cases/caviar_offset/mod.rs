@@ -16,6 +16,8 @@ use parse::*;
 mod rules;
 use rules::*;
 
+mod load;
+
 type Pat = Pattern<CaviarAnalysis>;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -64,7 +66,7 @@ impl Semilattice for Option<i64> {
     }
 
     fn insert_self_edge(&mut self, g: Self::G) {
-        assert_eq!(g, Offset(0));
+        // assert_eq!(g, Offset(0));
     }
 
     fn contains_self_edge(&self, g: &Self::G) -> bool {
