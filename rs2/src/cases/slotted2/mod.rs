@@ -189,12 +189,20 @@ fn canon_shape(it: impl Iterator<Item=Slot>) -> SlotMap {
     SlotMap::mk(d.into_iter())
 }
 
+#[track_caller]
+fn check(n: &SlottedLang) {
+    if let SlottedLang::Let(t, v, _) = n {
+        assert!(t.0.vals().any(|x| x != *v));
+    }
+}
+
 impl Analysis for Slotted {
     type G = SlotMap;
     type S = SlottedData;
     type L = SlottedLang;
 
     fn canon(n: &Self::L, uf: &Unionfind<Self::S>) -> (Self::G, Either<Self::L, Id>) {
+        check(n);
         match n {
             SlottedLang::Lam(x1, x2) => {
                 let (g2, i2) = uf.find(x2.clone());
@@ -311,7 +319,7 @@ impl Analysis for Slotted {
         let default = SlotMap::mk(eg.get_leader_semilattice(id).slots.iter().map(|s| (*s, *s)));
 
         // shouldn't I use the relation here?
-        ematch_impl((default, id), pat, st, eg).into_iter().map(|st| st.subst).collect()
+        ematch_impl((default, id), pat, st, eg).into_iter().map(final_subst).collect()
     }
 }
 

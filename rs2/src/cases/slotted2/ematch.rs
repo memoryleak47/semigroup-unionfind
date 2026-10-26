@@ -26,6 +26,17 @@ fn apply(map: &SlotMap, n: &SlottedLang) -> SlottedLang {
     n
 }
 
+pub fn final_subst(st: State) -> Subst<Slotted> {
+    let mut subst = st.subst;
+    for (_pvar, (m, _id)) in &mut subst {
+        *m = SlotMap::mk(m.iter().map(|(a, b)| {
+            if let Some(b2) = st.relation.get(&b) { (a, *b2) }
+            else { (a, b) }
+        }));
+    }
+    subst
+}
+
 fn get_slots_mut(n: &mut SlottedLang) -> Box<[&mut Slot]> {
     use SlottedLang::*;
     match n {
