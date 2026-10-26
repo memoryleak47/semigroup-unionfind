@@ -159,10 +159,11 @@ impl<N: Analysis> EGraph<N> {
         self.uf.classes()
     }
 
-    pub fn dump(&self) where N::S: Debug, N::G: Debug, N::L: Debug {
+    pub fn dump(&self) where N::S: Debug, N::G: Debug {
         self.uf.dump();
         for (n, i) in &self.hashcons {
-            println!("hc: {n:?} -> {i:?}");
+            let child_strings = N::children_mut(&mut n.clone()).iter().map(|x| format!("{:?}", x)).collect();
+            println!("hc: {} -> {i:?}", N::prettyprint(&n, child_strings));
         }
     }
 

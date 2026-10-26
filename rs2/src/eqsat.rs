@@ -45,6 +45,10 @@ pub fn eqsat<N: Analysis>(eg: &mut EGraph<N>, rules: &[Rule<N>], mut hooks: Box<
 
     eg.rebuild();
     for _ in 0..iter_limit {
+        // TODO: remove later.
+        eg.dump();
+        //
+
         if let Err(stop) = check_limits(eg) { return stop }
 
         for h in hooks.iter_mut() {
