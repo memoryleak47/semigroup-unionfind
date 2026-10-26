@@ -367,9 +367,9 @@ fn parse_rules() {
     rules();
 }
 
-pub fn run() {
-    let t1 = parse("(lam $61 (lam $62 (lam $63 (lam $64 (app map (app map (lam $1 (app (var $64) (app (var $63) (app (var $62) (app (var $61) (var $1))))))))))))");
-    let t2 = parse("(lam $61 (lam $62 (lam $63 (lam $64 (lam $4 (app (app map (app map (lam $2 (app (var $64) (app (var $63) (var $2)))))) (app (app map (app map (lam $3 (app (var $62) (app (var $61) (var $3)))))) (var $4))))))))");
+fn eqsat_test(t1: &str, t2: &str) {
+    let t1 = parse(t1);
+    let t2 = parse(t2);
 
     let mut eg = EGraph::new();
     let c1 = add_expr(&t1, &mut eg);
@@ -383,5 +383,12 @@ pub fn run() {
     dbg!(eg.hashcons.len());
     let stop_reason = eqsat(&mut eg, &rules, Box::new([hook]), Duration::from_secs(60), usize::MAX, 10);
     dbg!(eg.hashcons.len());
-    dbg!(stop_reason);
+    dbg!(&stop_reason);
+    assert_eq!(stop_reason, StopReason::Other("done!".to_string()));
+}
+
+pub fn run() {
+    let t1 = "(lam $61 (lam $62 (lam $63 (lam $64 (app map (app map (lam $1 (app (var $64) (app (var $63) (app (var $62) (app (var $61) (var $1))))))))))))";
+    let t2 = "(lam $61 (lam $62 (lam $63 (lam $64 (lam $4 (app (app map (app map (lam $2 (app (var $64) (app (var $63) (var $2)))))) (app (app map (app map (lam $3 (app (var $62) (app (var $61) (var $3)))))) (var $4))))))))";
+    eqsat_test(t1, t2);
 }
