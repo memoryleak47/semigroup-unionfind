@@ -393,6 +393,14 @@ fn slotted2_test() {
     );
 }
 
+#[test]
+fn slotted2_test2() {
+    eqsat_test(
+        "(app (lam $1 (var $1)) (lam $2 (var $2)))",
+        "(lam $3 (var $3))"
+    );
+}
+
 pub fn run() {
     let t1 = "(lam $61 (lam $62 (lam $63 (lam $64 (app map (app map (lam $1 (app (var $64) (app (var $63) (app (var $62) (app (var $61) (var $1))))))))))))";
     let t2 = "(lam $61 (lam $62 (lam $63 (lam $64 (lam $4 (app (app map (app map (lam $2 (app (var $64) (app (var $63) (var $2)))))) (app (app map (app map (lam $3 (app (var $62) (app (var $61) (var $3)))))) (var $4))))))))";
