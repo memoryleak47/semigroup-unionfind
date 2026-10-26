@@ -61,6 +61,10 @@ pub fn eqsat<N: Analysis>(eg: &mut EGraph<N>, rules: &[Rule<N>], mut hooks: Box<
             if let Err(stop) = check_limits(eg) { return stop }
         }
 
+        // TODO remove.
+        dbg!(&matches);
+        //
+
         for (matches_inner, (lhs, applier)) in matches.into_iter().zip(rules) {
             for subst in matches_inner {
                 let lhs_eclass = instantiate(lhs, eg, &subst);

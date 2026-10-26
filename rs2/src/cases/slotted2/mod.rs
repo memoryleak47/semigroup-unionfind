@@ -339,7 +339,6 @@ fn rules() -> Vec<Rule<Slotted>> {
     vec![
         rw!("eta"; "(lam $0 (app ?f (var $0)))" => "?f", if !slot_free_in("0", "f")),
         rw!("beta"; "(app (lam $0 ?body) ?e)" => "(let ?e $0 ?body)"),
-        rw!("let-intro"; "(app (lam $0 ?body) ?e)" => "(let ?e $0 ?body)"),
         rw!("let-unused"; "(let ?t $0 ?b)" => "?b", if !slot_free_in("0", "b")),
         rw!("let-var-same"; "(let ?e $0 (var $0))" => "?e"),
         rw!("let-app";"(let ?e $0 (app ?a ?b))"=>"(app (let ?e $0 ?a) (let ?e $0 ?b))", if or(slot_free_in("0", "a"), slot_free_in("0", "b"))),
