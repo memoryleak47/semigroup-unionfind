@@ -90,6 +90,11 @@ pub fn instantiate<N: Analysis>(pat: &Pattern<N>, eg: &mut EGraph<N>, subst: &Su
             for (c, nc) in N::children_mut(&mut n).into_iter().zip(pargs) {
                 *c = instantiate(nc, eg, subst);
             }
+
+            // TODO: remove.
+            dbg!(fmt_node::<N>(&n));
+            //
+
             eg.add(&n)
         },
         Pattern::G(g, pat) => {

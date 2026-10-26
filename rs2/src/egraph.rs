@@ -162,8 +162,7 @@ impl<N: Analysis> EGraph<N> {
     pub fn dump(&self) where N::S: Debug, N::G: Debug {
         self.uf.dump();
         for (n, i) in &self.hashcons {
-            let child_strings = N::children_mut(&mut n.clone()).iter().map(|x| format!("{:?}", x)).collect();
-            println!("hc: {} -> {i:?}", N::prettyprint(&n, child_strings));
+            println!("hc: {} -> {i:?}", fmt_node::<N>(n));
         }
     }
 
@@ -174,4 +173,10 @@ impl<N: Analysis> EGraph<N> {
     pub fn get_leader_semilattice(&self, x: Id) -> &N::S {
         self.uf.get_leader_semilattice(x)
     }
+
+}
+
+pub fn fmt_node<N: Analysis>(n: &N::L) -> String where N::G: Debug {
+    let child_strings = N::children_mut(&mut n.clone()).iter().map(|x| format!("{:?}", x)).collect();
+    N::prettyprint(&n, child_strings)
 }
