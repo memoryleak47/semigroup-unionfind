@@ -192,7 +192,7 @@ fn canon_shape(it: impl Iterator<Item=Slot>) -> SlotMap {
 #[track_caller]
 fn check(n: &SlottedLang) {
     if let SlottedLang::Let(t, v, _) = n {
-        assert!(t.0.vals().any(|x| x != *v));
+        assert!(t.0.vals().all(|x| x != *v));
     }
 }
 
@@ -246,7 +246,6 @@ impl Analysis for Slotted {
                 let t = uf.find(t.clone());
                 let b = uf.find(b.clone());
 
-                dbg!(&n);
                 assert!(t.0.vals().all(|a| a != *v), "If this panics, we'll have to refresh v before canonizing this e-node");
 
                 let mut slots_t: Vec<Slot> = uf.get_leader_semilattice(t.1).slots.iter().copied().collect();

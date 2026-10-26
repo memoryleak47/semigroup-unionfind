@@ -45,10 +45,6 @@ pub fn eqsat<N: Analysis>(eg: &mut EGraph<N>, rules: &[Rule<N>], mut hooks: Box<
 
     eg.rebuild();
     for _ in 0..iter_limit {
-        // TODO: remove later.
-        eg.dump();
-        //
-
         if let Err(stop) = check_limits(eg) { return stop }
 
         for h in hooks.iter_mut() {
@@ -60,10 +56,6 @@ pub fn eqsat<N: Analysis>(eg: &mut EGraph<N>, rules: &[Rule<N>], mut hooks: Box<
             matches.push(ematch_all(eg, lhs));
             if let Err(stop) = check_limits(eg) { return stop }
         }
-
-        // TODO remove.
-        dbg!(&matches);
-        //
 
         for (matches_inner, (lhs, applier)) in matches.into_iter().zip(rules) {
             for subst in matches_inner {
@@ -90,10 +82,6 @@ pub fn instantiate<N: Analysis>(pat: &Pattern<N>, eg: &mut EGraph<N>, subst: &Su
             for (c, nc) in N::children_mut(&mut n).into_iter().zip(pargs) {
                 *c = instantiate(nc, eg, subst);
             }
-
-            // TODO: remove.
-            dbg!(fmt_node::<N>(&n));
-            //
 
             eg.add(&n)
         },
