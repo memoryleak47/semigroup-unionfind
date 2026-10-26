@@ -10,7 +10,7 @@ type Slot = usize;
 
 /// SlotMap ///
 
-#[derive(Clone, Hash, PartialEq, Eq, Debug)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 struct SlotMap {
     v: Vec<(Slot, Slot)>
 }
@@ -48,6 +48,20 @@ impl Group for SlotMap {
 
     fn identity() -> SlotMap {
         SlotMap::mk(std::iter::empty())
+    }
+}
+
+impl Debug for SlotMap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[")?;
+        let mut it = self.iter();
+        if let Some((x, y)) = it.next() {
+            write!(f, "${x} -> ${y}")?;
+            for (x, y) in it {
+                write!(f, ", ${x} -> ${y}")?;
+            }
+        }
+        write!(f, "]")
     }
 }
 
@@ -224,6 +238,7 @@ impl Analysis for Slotted {
                 let t = uf.find(t.clone());
                 let b = uf.find(b.clone());
 
+                dbg!(&n);
                 assert!(t.0.vals().all(|a| a != *v), "If this panics, we'll have to refresh v before canonizing this e-node");
 
                 let mut slots_t: Vec<Slot> = uf.get_leader_semilattice(t.1).slots.iter().copied().collect();
