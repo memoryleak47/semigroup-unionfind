@@ -315,9 +315,8 @@ impl Analysis for Slotted {
 
     fn ematch(eg: &EGraph<Self>, id: Id, pat: &Pattern<Self>) -> Vec<Subst<Self>> {
         let st = State::default();
-        let default = SlotMap::mk(eg.get_leader_semilattice(id).slots.iter().map(|s| (*s, *s)));
+        let default = SlotMap::mk(eg.get_leader_semilattice(id).slots.iter().map(|s| (*s, fresh_slot())));
 
-        // shouldn't I use the relation here?
         ematch_impl((default, id), pat, st, eg).into_iter().map(final_subst).collect()
     }
 }

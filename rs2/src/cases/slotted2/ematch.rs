@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 static SLOT_COUNTER: AtomicUsize = AtomicUsize::new(10_000);
 
-fn fresh_slot() -> Slot {
+pub fn fresh_slot() -> Slot {
     SLOT_COUNTER.fetch_add(1, Ordering::SeqCst)
 }
 
