@@ -336,21 +336,21 @@ macro_rules! rw {
 
 fn rules() -> Vec<Rule<Slotted>> {
     vec![
-        rw!("eta"; "(lam $0 (app ?f (var $0)))" => "?f", if !slot_free_in("0", "f")),
+        rw!("eta"; "(lam $0 (app ?f (var $0)))" => "?f", if !slot_contained_in("0", "f")),
         rw!("beta"; "(app (lam $0 ?body) ?e)" => "(let ?e $0 ?body)"),
-        rw!("let-unused"; "(let ?t $0 ?b)" => "?b", if !slot_free_in("0", "b")),
+        rw!("let-unused"; "(let ?t $0 ?b)" => "?b", if !slot_contained_in("0", "b")),
         rw!("let-var-same"; "(let ?e $0 (var $0))" => "?e"),
-        rw!("let-app";"(let ?e $0 (app ?a ?b))"=>"(app (let ?e $0 ?a) (let ?e $0 ?b))", if or(slot_free_in("0", "a"), slot_free_in("0", "b"))),
-        rw!("let-lam-diff"; "(let ?e $0 (lam $1 ?body))"=>"(lam $1 (let ?e $0 ?body))", if slot_free_in("0", "body")),
+        rw!("let-app";"(let ?e $0 (app ?a ?b))"=>"(app (let ?e $0 ?a) (let ?e $0 ?b))", if or(slot_contained_in("0", "a"), slot_contained_in("0", "b"))),
+        rw!("let-lam-diff"; "(let ?e $0 (lam $1 ?body))"=>"(lam $1 (let ?e $0 ?body))", if slot_contained_in("0", "body")),
         rw!("map-fusion"; "(app (app map ?f) (app (app map ?g) ?arg))" => "(app (app map (lam $0 (app ?f (app ?g (var $0))))) ?arg)"),
-        rw!("map-fission"; "(app map (lam $0 (app ?f ?gx)))" => "(lam $2 (app (app map ?f) (app (app map (lam $0 ?gx)) (var $2))))", if !slot_free_in("0", "f"))
+        rw!("map-fission"; "(app map (lam $0 (app ?f ?gx)))" => "(lam $2 (app (app map ?f) (app (app map (lam $0 ?gx)) (var $2))))", if !slot_contained_in("0", "f"))
     ]
 }
 
-pub fn slot_free_in(slot: &str, var: &str) -> impl Cond {
+pub fn slot_contained_in(slot: &str, var: &str) -> impl Cond {
     let s: Slot = slot.parse::<usize>().unwrap();
     let var = Symbol::from(var);
-    move |_, subst, _| subst[&var].0.vals().all(|x| x != s)
+    move |_, subst, _| subst[&var].0.vals().any(|x| x == s)
 }
 
 pub fn or(x: impl Cond, y: impl Cond) -> impl Cond {
